@@ -6,32 +6,68 @@ import { RequireNomor } from '@/components/RouteGuard';
 import { supabase } from '@/lib/supabase';
 import { Nomor, NOMOR_LABELS, ChatLog } from '@/lib/types';
 
+const N8N_WEBHOOK_URL = 'https://n8n-crfkzibn5git.jkt3.sumopod.my.id/webhook/pull-room-history';
+const DAY_PRESETS = [7, 30, 90, 120, 360];
+
+interface ImportJob {
+  id: string;
+  status: 'running' | 'done' | 'error';
+  messages_pulled: number | null;
+}
+
 function ChatThreadContent({ nomor, nomorWa }: { nomor: Nomor; nomorWa: string }) {
   const [logs, setLogs] = useState<ChatLog[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showPresets, setShowPresets] = useState(false);
+  const [activeJob, setActiveJob] = useState<ImportJob | null>(null);
+  const [pullError, setPullError] = useState('');
   const bottomRef = useRef<HTMLDivElement>(null);
   const sessionLabel = NOMOR_LABELS[nomor];
 
   useEffect(() => {
     load();
 
-    const channel = supabase
+    const chatChannel = supabase
       .channel(`chat_thread_${nomorWa}`)
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'chat_logs', filter: `nomor_wa=eq.${nomorWa}` },
         (payload) => {
-          setLogs((prev) => [...prev, payload.new as ChatLog]);
-          setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
+          setLogs((prev) => {
+            if (prev.some((l) => l.id === (payload.new as ChatLog).id)) return prev;
+            const next = [...prev, payload.new as ChatLog].sort(
+              (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+            );
+            return next;
+          });
         }
       )
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(chatChannel);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nomorWa]);
+
+  useEffect(() => {
+    if (!activeJob || activeJob.status !== 'running') return;
+
+    const jobChannel = supabase
+      .channel(`import_job_${activeJob.id}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'import_jobs', filter: `id=eq.${activeJob.id}` },
+        (payload) => {
+          setActiveJob(payload.new as ImportJob);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(jobChannel);
+    };
+  }, [activeJob]);
 
   async function load() {
     const { data } = await supabase
@@ -44,6 +80,26 @@ function ChatThreadContent({ nomor, nomorWa }: { nomor: Nomor; nomorWa: string }
     setLogs((data as ChatLog[]) || []);
     setLoading(false);
     setTimeout(() => bottomRef.current?.scrollIntoView(), 100);
+  }
+
+  async function handlePullHistory(days: number) {
+    setShowPresets(false);
+    setPullError('');
+    try {
+      const res = await fetch(N8N_WEBHOOK_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nomor_wa: nomorWa, nomor, days }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.job_id) {
+        setPullError('Gagal memulai penarikan riwayat.');
+        return;
+      }
+      setActiveJob({ id: data.job_id, status: 'running', messages_pulled: null });
+    } catch {
+      setPullError('Gagal menghubungi server. Coba lagi.');
+    }
   }
 
   function exportCsv() {
@@ -79,13 +135,51 @@ function ChatThreadContent({ nomor, nomorWa }: { nomor: Nomor; nomorWa: string }
               <p className="text-xs text-gray-500">{nomorWa}</p>
             </div>
           </div>
-          <button
-            onClick={exportCsv}
-            className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
-          >
-            Export CSV
-          </button>
+
+          <div className="flex items-center gap-2">
+            {activeJob?.status === 'running' && (
+              <span className="flex items-center gap-2 rounded-lg bg-blue-50 px-3 py-1.5 text-xs text-blue-700">
+                <span className="h-2 w-2 animate-pulse rounded-full bg-blue-500" />
+                Menarik riwayat...
+              </span>
+            )}
+            {activeJob?.status === 'done' && (
+              <span className="rounded-lg bg-green-50 px-3 py-1.5 text-xs text-green-700">
+                Selesai · {activeJob.messages_pulled ?? 0} pesan ditarik
+              </span>
+            )}
+
+            <div className="relative">
+              <button
+                onClick={() => setShowPresets((v) => !v)}
+                className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
+              >
+                Tarik riwayat lebih lama
+              </button>
+              {showPresets && (
+                <div className="absolute right-0 z-10 mt-1 w-40 rounded-lg border border-gray-200 bg-white shadow-lg">
+                  {DAY_PRESETS.map((d) => (
+                    <button
+                      key={d}
+                      onClick={() => handlePullHistory(d)}
+                      className="block w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
+                    >
+                      {d} hari terakhir
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <button
+              onClick={exportCsv}
+              className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
+            >
+              Export CSV
+            </button>
+          </div>
         </div>
+        {pullError && <p className="mx-auto mt-2 max-w-3xl text-sm text-red-600">{pullError}</p>}
       </header>
 
       <div className="flex-1 overflow-y-auto bg-gray-50 px-4 py-6">
