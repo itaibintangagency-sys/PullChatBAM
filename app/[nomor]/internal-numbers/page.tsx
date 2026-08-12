@@ -6,6 +6,14 @@ import { NavHeader } from '@/components/NavHeader';
 import { supabase } from '@/lib/supabase';
 import { Nomor, InternalNumber } from '@/lib/types';
 
+function normalizeNomor(raw: string): string {
+  // Buang semua karakter selain digit
+  let cleaned = raw.replace(/[^0-9]/g, '');
+  // Kalau diawali 0, ganti jadi 62
+  if (cleaned.startsWith('0')) cleaned = '62' + cleaned.slice(1);
+  return cleaned;
+}
+
 function InternalNumbersContent({ nomor }: { nomor: Nomor }) {
   const [items, setItems] = useState<InternalNumber[]>([]);
   const [loading, setLoading] = useState(true);
@@ -24,15 +32,29 @@ function InternalNumbersContent({ nomor }: { nomor: Nomor }) {
     setLoading(false);
   }
 
+  function handleNomorChange(e: React.ChangeEvent<HTMLInputElement>) {
+    // Auto-strip tiap kali diketik — hanya digit yang tersisa
+    setNomorWa(normalizeNomor(e.target.value));
+  }
+
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
     setError('');
-    if (!nomorWa.trim() || !label.trim()) {
+
+    const normalized = normalizeNomor(nomorWa);
+
+    if (!normalized || !label.trim()) {
       setError('Nomor WA dan label wajib diisi.');
       return;
     }
+
+    if (!/^62[0-9]{8,13}$/.test(normalized)) {
+      setError('Format nomor tidak valid. Harus diawali 62, tanpa tanda + atau spasi (contoh: 6281234567890).');
+      return;
+    }
+
     const { error: insertError } = await supabase.from('internal_numbers').insert({
-      nomor_wa: nomorWa.trim(),
+      nomor_wa: normalized,
       label: label.trim(),
       keterangan: keterangan.trim() || null,
     });
@@ -64,9 +86,10 @@ function InternalNumbersContent({ nomor }: { nomor: Nomor }) {
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <input
               type="text"
-              placeholder="Nomor WA (628xxx)"
+              inputMode="numeric"
+              placeholder="Nomor WA (62812xxxxxxx)"
               value={nomorWa}
-              onChange={(e) => setNomorWa(e.target.value)}
+              onChange={handleNomorChange}
               className="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-gray-500"
             />
             <input
@@ -84,6 +107,9 @@ function InternalNumbersContent({ nomor }: { nomor: Nomor }) {
               className="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-gray-500"
             />
           </div>
+          <p className="mt-1 text-xs text-gray-400">
+            Format otomatis dirapikan — tanpa tanda +, spasi, atau strip. Contoh: 6281234567890
+          </p>
           {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
           <button
             type="submit"
