@@ -57,3 +57,12 @@ export interface StaffProfile {
   display_name: string;
   role: 'admin' | 'staff';
 }
+
+export interface BotToggleLog {
+  id: string;
+  action: 'ON' | 'OFF';
+  triggered_by: string | null;
+  status: 'success' | 'failed';
+  api_response: string | null;
+  created_at: string;
+}

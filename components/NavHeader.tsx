@@ -14,6 +14,7 @@ export function NavHeader({ nomor }: { nomor: Nomor }) {
     { href: `/${nomor}/chats`, label: 'Chat log' },
     { href: `/${nomor}/review`, label: 'Review harian' },
     { href: `/${nomor}/internal-numbers`, label: 'Nomor internal' },
+    ...(nomor === '1052' ? [{ href: `/${nomor}/bot-status`, label: 'Status Bot' }] : []),
   ];
 
   function switchNomor() {
@@ -32,8 +33,7 @@ export function NavHeader({ nomor }: { nomor: Nomor }) {
           </div>
           <nav className="flex gap-1">
             {tabs.map((t) => {
-              const active = pathname?.startsWith(t.href.split('?')[0].replace(/\/[^/]+$/, '')) || pathname === t.href;
-              const isActive = pathname === t.href || (t.label === 'Chat log' && pathname?.includes('/chats'));
+              const isActive = pathname === t.href || pathname?.startsWith(t.href + '/');
               return (
                 <Link
                   key={t.href}
