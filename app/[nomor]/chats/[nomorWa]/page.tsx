@@ -191,10 +191,22 @@ function ChatThreadContent({ nomor, nomorWa }: { nomor: Nomor; nomorWa: string }
           ) : (
             logs.map((log, i) => {
               const prevSource = i > 0 ? logs[i - 1].source : log.source;
-              const showDivider = log.source === 'realtime' && prevSource === 'historical';
+              const showSourceDivider = log.source === 'realtime' && prevSource === 'historical';
+
+              const prevDateKey = i > 0 ? new Date(logs[i - 1].timestamp).toDateString() : null;
+              const currDateKey = new Date(log.timestamp).toDateString();
+              const showDateDivider = prevDateKey !== currDateKey;
+
               return (
                 <div key={log.id}>
-                  {showDivider && (
+                  {showDateDivider && (
+                    <div className="my-4 flex items-center justify-center">
+                      <span className="rounded-full bg-gray-200 px-3 py-1 text-xs font-medium text-gray-600">
+                        {formatDateLabel(log.timestamp)}
+                      </span>
+                    </div>
+                  )}
+                  {showSourceDivider && (
                     <div className="my-4 flex items-center gap-3">
                       <div className="h-px flex-1 bg-gray-300" />
                       <span className="text-xs text-gray-400">Riwayat sebelum sistem aktif</span>
@@ -211,6 +223,21 @@ function ChatThreadContent({ nomor, nomorWa }: { nomor: Nomor; nomorWa: string }
       </div>
     </div>
   );
+}
+
+function formatDateLabel(dateStr: string): string {
+  const date = new Date(dateStr);
+  const today = new Date();
+  const yesterday = new Date();
+  yesterday.setDate(today.getDate() - 1);
+
+  const isSameDay = (a: Date, b: Date) =>
+    a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+
+  if (isSameDay(date, today)) return 'Hari ini';
+  if (isSameDay(date, yesterday)) return 'Kemarin';
+
+  return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
 }
 
 function Bubble({ log }: { log: ChatLog }) {
