@@ -13,12 +13,13 @@ export function NavHeader({ nomor }: { nomor: Nomor }) {
   const tabs = [
     { href: `/${nomor}/chats`, label: 'Chat log' },
     { href: `/${nomor}/escalations`, label: 'Eskalasi' },
+    { href: `/${nomor}/blacklist`, label: 'Blacklist' },
     { href: `/${nomor}/review`, label: 'Review harian' },
     { href: `/${nomor}/internal-numbers`, label: 'Nomor internal' },
     { href: '/status-bot', label: 'Status Bot' },
     ...(profile?.role === 'admin' ? [{ href: '/pengaturan/staff-routing', label: 'Pengaturan' }] : []),
   ];
-
+  
   function switchNomor() {
     const other: Nomor = nomor === '7484' ? '1052' : '7484';
     setNomor(other);
