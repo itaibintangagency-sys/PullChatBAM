@@ -6,6 +6,7 @@ import { RequireNomor } from '@/components/RouteGuard';
 import { NavHeader } from '@/components/NavHeader';
 import { supabase } from '@/lib/supabase';
 import { Nomor } from '@/lib/types';
+import { SkeletonCard } from '@/components/Skeleton';
 
 interface Counts {
   escalationsOpen: number;
