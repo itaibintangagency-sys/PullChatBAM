@@ -66,3 +66,21 @@ export interface BotToggleLog {
   api_response: string | null;
   created_at: string;
 }
+export interface StaffProfile {
+  id: string;
+  display_name: string;
+  role: 'admin' | 'staff'; // TODO: tambah 'm_level' nanti pas role itu dirilis
+}
+
+export interface L0Config {
+  id: string;
+  variable_key: string;
+  display_name: string;
+  nomor_wa: string;
+  peran: string | null;
+  category: string | null;
+  peran_notif: string | null;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+}
