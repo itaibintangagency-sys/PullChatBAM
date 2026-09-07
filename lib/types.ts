@@ -105,3 +105,13 @@ export interface Escalation {
   locked_by: string | null;
   locked_at: string | null;
 }
+
+export interface BlacklistEntry {
+  id: string;
+  nomor_wa: string;
+  bot_source: string;
+  detected_at: string;
+  reason: string | null;
+  original_message: string | null;
+}
+ 
