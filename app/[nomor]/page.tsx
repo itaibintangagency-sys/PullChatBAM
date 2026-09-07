@@ -116,8 +116,13 @@ function DashboardContent({ nomor }: { nomor: Nomor }) {
         <h1 className="mb-1 text-lg font-medium text-gray-900">Dashboard</h1>
         <p className="mb-6 text-sm text-gray-500">Ringkasan cepat bot {nomor}.</p>
 
-        {loading ? (
-          <p className="text-sm text-gray-400">Memuat...</p>
+      {loading ? (
+  <div className="space-y-2">
+    <div className="rounded-xl border border-gray-200 bg-white"><SkeletonRow /></div>
+    <div className="rounded-xl border border-gray-200 bg-white"><SkeletonRow /></div>
+    <div className="rounded-xl border border-gray-200 bg-white"><SkeletonRow /></div>
+  </div>
+) : filtered.length === 0 ? (
         ) : (
           <div className="space-y-6">
             {/* Kartu utama */}
