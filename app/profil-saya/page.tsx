@@ -28,6 +28,7 @@ function ProfilSayaContent() {
   async function handleSaveName(e: React.FormEvent) {
     e.preventDefault();
     setNameError('');
+    console.log('DEBUG profile.id:', profile?.id); 
     setNameSuccess('');
 
     if (!displayName.trim()) {
