@@ -15,6 +15,7 @@ export function NavHeader({ nomor }: { nomor: Nomor }) {
     { href: `/${nomor}/review`, label: 'Review harian' },
     { href: `/${nomor}/internal-numbers`, label: 'Nomor internal' },
     ...(nomor === '1052' ? [{ href: `/${nomor}/bot-status`, label: 'Status Bot' }] : []),
+    ...(profile?.role === 'admin' ? [{ href: '/pengaturan/staff-routing', label: 'Pengaturan' }] : []),
   ];
 
   function switchNomor() {
