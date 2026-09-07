@@ -122,9 +122,10 @@ function EscalationsContent({ nomor }: { nomor: Nomor }) {
   }
 
   return (
-    <div>
-      <NavHeader nomor={nomor} />
-      <main className="mx-auto max-w-4xl px-4 py-6">
+   // SESUDAH — tambah pl-56 di div pembungkus
+<div className="pl-56">
+  <NavHeader nomor={nomor} />
+  <main className="mx-auto max-w-4xl px-4 py-6">
         <div className="mb-4 flex items-center justify-between">
           <div>
             <h1 className="text-lg font-medium text-gray-900">Eskalasi</h1>
