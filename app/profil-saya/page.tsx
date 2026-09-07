@@ -44,7 +44,8 @@ function ProfilSayaContent() {
       setNameError('Gagal menyimpan nama.');
       return;
     }
-    setNameSuccess('Nama berhasil diubah.');
+  setNameSuccess('Nama berhasil diubah. Memuat ulang...');
+  setTimeout(() => window.location.reload(), 800);
   }
 
   async function handleChangePassword(e: React.FormEvent) {
