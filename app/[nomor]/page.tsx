@@ -98,8 +98,9 @@ function DashboardContent({ nomor }: { nomor: Nomor }) {
     setPriority(prio);
 
     const dorm: DormantBreakdown = { HANDOFF: 0, BUNTU_9X: 0, other: 0 };
-    (dormantRows.data || []).forEach((r) => {
-      if (r.source === 'HANDOFF' || r.source === 'BUNTU_9X') dorm[r.source]++;
+    (dormantRows.data || []).forEach((r: { source: string | null }) => {
+      const s = r.source;
+      if (s === 'HANDOFF' || s === 'BUNTU_9X') dorm[s]++;
       else dorm.other++;
     });
     setDormantSrc(dorm);
