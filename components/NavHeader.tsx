@@ -24,7 +24,8 @@ export function NavHeader({ nomor }: { nomor: Nomor }) {
   { href: '/pengaturan/staff-routing', label: 'Pengaturan' },
   { href: '/pengaturan/kelola-staff', label: 'Kelola Staff' },
 ] : []),
-
+];
+  
   function switchNomor() {
     const other: Nomor = nomor === '7484' ? '1052' : '7484';
     setNomor(other);
