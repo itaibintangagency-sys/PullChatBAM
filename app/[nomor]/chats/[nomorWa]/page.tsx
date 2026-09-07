@@ -255,8 +255,10 @@ function Bubble({ log }: { log: ChatLog }) {
           isCustomer ? 'bg-white text-gray-900' : 'bg-green-600 text-white'
         }`}
       >
-        {log.message_type !== 'text' && log.media_url && (
-          <img src={log.media_url} alt="media" className="mb-1 max-h-64 rounded-lg" />
+        {log.message_type !== 'text' && log.media_url && (<img
+          src={log.media_url.includes('drive.google.com') ? log.media_url : `/api/media-proxy?url=${encodeURIComponent(log.media_url)}`}
+          alt="media"
+          className="mb-1 max-h-64 rounded-lg" />
         )}
         {log.message_type !== 'text' && !log.media_url && (
           <p className={`text-xs italic ${isCustomer ? 'text-gray-400' : 'text-green-100'}`}>
