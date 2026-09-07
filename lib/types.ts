@@ -115,3 +115,15 @@ export interface BlacklistEntry {
   original_message: string | null;
 }
  
+export interface DormantEntry {
+  id: string;
+  nomor_wa: string;
+  bot_source: string;
+  source: string; // 'HANDOFF' atau 'BUNTU_9X'
+  ticket_id: string | null;
+  logged_at: string;
+  dormant_until: string | null;
+  fu_count: number;
+  status: string; // 'PENDING' | 'RESOLVED'
+  notified_cs_bintang: boolean;
+}
