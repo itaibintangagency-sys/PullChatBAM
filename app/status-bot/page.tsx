@@ -103,9 +103,10 @@ function BotStatusContent() {
     sortKey === col ? <span className="ml-1 text-xs">{sortDir === 'asc' ? '↑' : '↓'}</span> : null;
 
   return (
-    <div>
-      <NavHeader nomor={nomor || '1052'} />
-      <main className="mx-auto max-w-4xl px-4 py-6">
+   // SESUDAH — tambah pl-56 di div pembungkus
+<div className="pl-56">
+  <NavHeader nomor={nomor} />
+  <main className="mx-auto max-w-4xl px-4 py-6">
         <h1 className="mb-1 text-lg font-medium text-gray-900">Status Bot</h1>
         <p className="mb-6 text-sm text-gray-500">
           Berlaku untuk kedua nomor bot (7484 &amp; 1052) — kill-switch-nya sudah disatukan.
