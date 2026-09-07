@@ -35,10 +35,7 @@ interface DormantBreakdown {
 
 function CountCard({ href, label, value, tone }: { href: string; label: string; value: number; tone: string }) {
   return (
-    <Link
-      href={href}
-      className={`block rounded-xl border p-5 transition hover:shadow-sm ${tone}`}
-    >
+    <Link href={href} className={`block rounded-xl border p-5 transition hover:shadow-sm ${tone}`}>
       <p className="text-3xl font-semibold">{value}</p>
       <p className="mt-1 text-sm opacity-80">{label}</p>
     </Link>
@@ -116,15 +113,17 @@ function DashboardContent({ nomor }: { nomor: Nomor }) {
         <h1 className="mb-1 text-lg font-medium text-gray-900">Dashboard</h1>
         <p className="mb-6 text-sm text-gray-500">Ringkasan cepat bot {nomor}.</p>
 
-      {loading ? (
-  <div className="space-y-2">
-    <div className="rounded-xl border border-gray-200 bg-white"><SkeletonRow /></div>
-    <div className="rounded-xl border border-gray-200 bg-white"><SkeletonRow /></div>
-    <div className="rounded-xl border border-gray-200 bg-white"><SkeletonRow /></div>
-  </div>
-) : filtered.length === 0 ? (
-        ) : (
+        {loading ? (
           <div className="space-y-6">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <SkeletonCard />
+              <SkeletonCard />
+              <SkeletonCard />
+              <SkeletonCard />
+            </div>
+          </div>
+        ) : (
+          <div className="animate-in fade-in space-y-6 duration-300">
             {/* Kartu utama */}
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               <CountCard
