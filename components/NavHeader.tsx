@@ -11,7 +11,8 @@ export function NavHeader({ nomor }: { nomor: Nomor }) {
   const { profile, signOut, setNomor } = useAuth();
 
   const tabs = [
-    { href: `/${nomor}/chats`, label: 'Chat log' },
+    { href: `/${nomor}/chats`, label: 'Chat log' },   
+    { href: `/${nomor}/dormant`, label: 'Dormant' }, 
     { href: `/${nomor}/escalations`, label: 'Eskalasi' },
     { href: `/${nomor}/blacklist`, label: 'Blacklist' },
     { href: `/${nomor}/review`, label: 'Review harian' },
