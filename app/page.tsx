@@ -14,7 +14,7 @@ export default function HomePage() {
     if (loading) return;
     if (!session) router.replace('/login');
     else if (!nomor) router.replace('/bind');
-    else router.replace(`/${nomor}/chats`);
+    else router.replace(`/${nomor}`);
   }, [loading, session, nomor, router]);
 
   return (
