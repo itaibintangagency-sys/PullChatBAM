@@ -83,10 +83,11 @@ function DashboardContent({ nomor }: { nomor: Nomor }) {
     // Beban kerja per staff -- dihitung di sisi client dari baris OPEN
     const loadMap: Record<string, number> = {};
     const prio: PriorityBreakdown = { HIGH: 0, MEDIUM: 0, LOW: 0, other: 0 };
-    (escOpenRows.data || []).forEach((r) => {
+    (escOpenRows.data || []).forEach((r: { assigned_to: string | null; priority: string | null }) => {
       const staff = r.assigned_to || 'Belum ditugaskan';
       loadMap[staff] = (loadMap[staff] || 0) + 1;
-      if (r.priority === 'HIGH' || r.priority === 'MEDIUM' || r.priority === 'LOW') prio[r.priority]++;
+      const p = r.priority;
+      if (p === 'HIGH' || p === 'MEDIUM' || p === 'LOW') prio[p]++;
       else prio.other++;
     });
     setStaffLoad(
