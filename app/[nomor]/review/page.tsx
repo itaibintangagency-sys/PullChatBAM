@@ -63,9 +63,10 @@ function ReviewContent({ nomor }: { nomor: Nomor }) {
 
   if (submitted) {
     return (
-      <div>
-        <NavHeader nomor={nomor} />
-        <main className="mx-auto max-w-lg px-4 py-16 text-center">
+  // SESUDAH — tambah pl-56 di div pembungkus
+<div className="pl-56">
+  <NavHeader nomor={nomor} />
+  <main className="mx-auto max-w-4xl px-4 py-6">
           <p className="text-lg font-medium text-gray-900">Review tersimpan</p>
           <p className="mt-1 text-sm text-gray-500">Terima kasih sudah mengisi review harian.</p>
           <button
