@@ -3,9 +3,9 @@
 import { useEffect, useState, useMemo, use } from 'react';
 import { RequireNomor } from '@/components/RouteGuard';
 import { NavHeader } from '@/components/NavHeader';
-import { useAuth } from '@/lib/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { Nomor, Escalation } from '@/lib/types';
+import { SkeletonRow } from '@/components/Skeleton';
 
 type StatusFilter = 'OPEN' | 'RESOLVED' | 'all';
 type PriorityFilter = 'all' | 'HIGH' | 'MEDIUM' | 'LOW';
@@ -28,7 +28,6 @@ function priorityBadge(p: string | null) {
 }
 
 function EscalationsContent({ nomor }: { nomor: Nomor }) {
-  const { profile } = useAuth();
   const [items, setItems] = useState<Escalation[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('OPEN');
@@ -54,6 +53,7 @@ function EscalationsContent({ nomor }: { nomor: Nomor }) {
     return () => {
       supabase.removeChannel(channel);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nomor]);
 
   async function load() {
@@ -72,7 +72,6 @@ function EscalationsContent({ nomor }: { nomor: Nomor }) {
     if (statusFilter !== 'all') list = list.filter((i) => i.status === statusFilter);
     if (priorityFilter !== 'all') list = list.filter((i) => i.priority === priorityFilter);
 
-    // Prioritas tinggi & yang paling lama menunggu naik ke atas
     const priorityOrder: Record<string, number> = { HIGH: 0, MEDIUM: 1, LOW: 2 };
     return [...list].sort((a, b) => {
       const pa = priorityOrder[a.priority || ''] ?? 3;
@@ -122,10 +121,9 @@ function EscalationsContent({ nomor }: { nomor: Nomor }) {
   }
 
   return (
-   // SESUDAH — tambah pl-56 di div pembungkus
-<div className="pl-56">
-  <NavHeader nomor={nomor} />
-  <main className="mx-auto max-w-4xl px-4 py-6">
+    <div className="pl-56">
+      <NavHeader nomor={nomor} />
+      <main className="mx-auto max-w-4xl px-4 py-6">
         <div className="mb-4 flex items-center justify-between">
           <div>
             <h1 className="text-lg font-medium text-gray-900">Eskalasi</h1>
@@ -162,11 +160,15 @@ function EscalationsContent({ nomor }: { nomor: Nomor }) {
 
         {/* List */}
         {loading ? (
-          <p className="text-sm text-gray-400">Memuat...</p>
+          <div className="space-y-2">
+            <div className="rounded-xl border border-gray-200 bg-white"><SkeletonRow /></div>
+            <div className="rounded-xl border border-gray-200 bg-white"><SkeletonRow /></div>
+            <div className="rounded-xl border border-gray-200 bg-white"><SkeletonRow /></div>
+          </div>
         ) : filtered.length === 0 ? (
           <p className="text-sm text-gray-400">Tidak ada tiket di filter ini.</p>
         ) : (
-          <div className="space-y-2">
+          <div className="animate-in fade-in space-y-2 duration-300">
             {filtered.map((item) => {
               const expanded = expandedId === item.id;
               const resolving = resolvingId === item.id;
@@ -197,7 +199,7 @@ function EscalationsContent({ nomor }: { nomor: Nomor }) {
                   </button>
 
                   {expanded && (
-                    <div className="border-t border-gray-100 px-4 py-3 text-sm">
+                    <div className="animate-in fade-in border-t border-gray-100 px-4 py-3 text-sm duration-200">
                       <dl className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                         <div>
                           <dt className="text-xs text-gray-400">Tiket</dt>
@@ -241,7 +243,7 @@ function EscalationsContent({ nomor }: { nomor: Nomor }) {
                               Tandai selesai
                             </button>
                           ) : (
-                            <div className="space-y-2">
+                            <div className="animate-in fade-in space-y-2 duration-200">
                               <textarea
                                 value={resolutionText}
                                 onChange={(e) => setResolutionText(e.target.value)}
