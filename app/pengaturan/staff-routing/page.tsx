@@ -7,8 +7,6 @@ import { useAuth } from '@/lib/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { L0Config } from '@/lib/types';
 
-const KEY_LOCK_WINDOW_MS = 10 * 60 * 1000; // 10 menit
-
 function normalizeNomor(raw: string): string {
   let cleaned = raw.replace(/[^0-9]/g, '');
   if (cleaned.startsWith('0')) cleaned = '62' + cleaned.slice(1);
@@ -19,33 +17,24 @@ function suggestVariableKey(name: string): string {
   return 'STAF_' + name.trim().toUpperCase().replace(/\s+/g, '_').replace(/[^A-Z0-9_]/g, '');
 }
 
-function isKeyLocked(createdAt: string): boolean {
-  return Date.now() - new Date(createdAt).getTime() > KEY_LOCK_WINDOW_MS;
-}
-
 function StaffRoutingContent() {
   const { nomor } = useAuth();
   const [items, setItems] = useState<L0Config[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  // Form tambah staff baru
+  // Form tambah staff baru — SEMUA field masih diisi di sini, karena baru dibuat
   const [displayName, setDisplayName] = useState('');
   const [variableKey, setVariableKey] = useState('');
-  const [keyTouched, setKeyTouched] = useState(false); // apakah user override manual
+  const [keyTouched, setKeyTouched] = useState(false);
   const [nomorWa, setNomorWa] = useState('');
   const [peran, setPeran] = useState('');
   const [category, setCategory] = useState('');
   const [peranNotif, setPeranNotif] = useState('');
 
-  // Baris yang lagi diedit
+  // Edit baris lama — CUMA nomor WA
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editDisplayName, setEditDisplayName] = useState('');
   const [editNomorWa, setEditNomorWa] = useState('');
-  const [editPeran, setEditPeran] = useState('');
-  const [editCategory, setEditCategory] = useState('');
-  const [editPeranNotif, setEditPeranNotif] = useState('');
-  const [editVariableKey, setEditVariableKey] = useState('');
 
   useEffect(() => {
     load();
@@ -58,7 +47,6 @@ function StaffRoutingContent() {
     setLoading(false);
   }
 
-  // Auto-suggest variable_key dari nama, kecuali user sudah override manual
   useEffect(() => {
     if (!keyTouched) setVariableKey(suggestVariableKey(displayName));
   }, [displayName, keyTouched]);
@@ -113,41 +101,27 @@ function StaffRoutingContent() {
 
   function startEdit(item: L0Config) {
     setEditingId(item.id);
-    setEditDisplayName(item.display_name);
     setEditNomorWa(item.nomor_wa);
-    setEditPeran(item.peran || '');
-    setEditCategory(item.category || '');
-    setEditPeranNotif(item.peran_notif || '');
-    setEditVariableKey(item.variable_key);
+    setError('');
   }
 
   async function saveEdit(item: L0Config) {
     setError('');
     const normalized = normalizeNomor(editNomorWa);
-    if (!editDisplayName.trim() || !normalized) {
-      setError('Nama dan nomor WA wajib diisi.');
+    if (!normalized) {
+      setError('Nomor WA wajib diisi.');
       return;
     }
     if (!/^62[0-9]{8,13}$/.test(normalized)) {
-      setError('Format nomor tidak valid.');
+      setError('Format nomor tidak valid. Harus diawali 62, tanpa tanda + atau spasi.');
       return;
     }
 
-    const payload: Partial<L0Config> = {
-      display_name: editDisplayName.trim(),
-      nomor_wa: normalized,
-      peran: editPeran.trim() || null,
-      category: editCategory.trim() || null,
-      peran_notif: editPeranNotif.trim() || null,
-      updated_at: new Date().toISOString(),
-    };
+    const { error: updateError } = await supabase
+      .from('l0_config')
+      .update({ nomor_wa: normalized, updated_at: new Date().toISOString() })
+      .eq('id', item.id);
 
-    // variable_key cuma boleh berubah kalau masih dalam jendela waktu
-    if (!isKeyLocked(item.created_at) && editVariableKey.trim().toUpperCase() !== item.variable_key) {
-      payload.variable_key = editVariableKey.trim().toUpperCase();
-    }
-
-    const { error: updateError } = await supabase.from('l0_config').update(payload).eq('id', item.id);
     if (updateError) {
       setError('Gagal menyimpan perubahan.');
       return;
@@ -168,7 +142,7 @@ function StaffRoutingContent() {
         <h1 className="mb-1 text-lg font-medium text-gray-900">Staff &amp; routing eskalasi</h1>
         <p className="mb-6 text-sm text-gray-500">
           Daftar staff yang menerima notifikasi eskalasi dari bot. Data ini dipakai bersama oleh kedua nomor
-          bot (7484 &amp; 1052) — bukan data terpisah per nomor.
+          bot (7484 &amp; 1052).
         </p>
 
         {/* Form tambah staff baru */}
@@ -194,7 +168,7 @@ function StaffRoutingContent() {
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-gray-500"
               />
               <p className="mt-1 text-xs text-gray-400">
-                Otomatis terisi dari nama — bisa diketik ulang manual kalau perlu beda (contoh: CS, CS2).
+                Otomatis terisi dari nama — bisa diketik ulang manual (contoh: CS, CS2).
               </p>
             </div>
             <input
@@ -228,8 +202,8 @@ function StaffRoutingContent() {
             />
           </div>
           <p className="mt-2 text-xs text-amber-600">
-            ⚠️ Variable key dipakai langsung oleh kode bot. Setelah 10 menit, key ini terkunci permanen — pastikan
-            benar sebelum simpan.
+            ⚠️ Semua field di sini cuma bisa diisi SEKALI di sini. Setelah staff tersimpan, cuma nomor WA yang
+            bisa diubah lagi.
           </p>
           {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
           <button
@@ -248,105 +222,75 @@ function StaffRoutingContent() {
         ) : (
           <div className="divide-y divide-gray-100 rounded-xl border border-gray-200 bg-white">
             {items.map((item) => {
-              const locked = isKeyLocked(item.created_at);
               const editing = editingId === item.id;
 
-              if (editing) {
-                return (
-                  <div key={item.id} className="space-y-2 px-4 py-3">
-                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                      <input
-                        value={editDisplayName}
-                        onChange={(e) => setEditDisplayName(e.target.value)}
-                        placeholder="Nama"
-                        className="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-gray-500"
-                      />
-                      <input
-                        value={editVariableKey}
-                        onChange={(e) => setEditVariableKey(e.target.value.toUpperCase())}
-                        disabled={locked}
-                        placeholder="Variable key"
-                        className="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-gray-500 disabled:bg-gray-100 disabled:text-gray-400"
-                      />
-                      <input
-                        value={editNomorWa}
-                        onChange={(e) => setEditNomorWa(normalizeNomor(e.target.value))}
-                        placeholder="Nomor WA"
-                        className="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-gray-500"
-                      />
-                      <input
-                        value={editCategory}
-                        onChange={(e) => setEditCategory(e.target.value)}
-                        placeholder="Kategori"
-                        className="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-gray-500"
-                      />
-                      <input
-                        value={editPeran}
-                        onChange={(e) => setEditPeran(e.target.value)}
-                        placeholder="Peran"
-                        className="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-gray-500 sm:col-span-2"
-                      />
-                      <input
-                        value={editPeranNotif}
-                        onChange={(e) => setEditPeranNotif(e.target.value)}
-                        placeholder="Peran notif"
-                        className="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-gray-500 sm:col-span-2"
-                      />
-                    </div>
-                    {locked && (
-                      <p className="text-xs text-gray-400">
-                        Variable key terkunci (lewat 10 menit sejak dibuat: {new Date(item.created_at).toLocaleString('id-ID')}).
-                      </p>
-                    )}
-                    {error && <p className="text-sm text-red-600">{error}</p>}
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => saveEdit(item)}
-                        className="rounded-lg bg-gray-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-800"
-                      >
-                        Simpan
-                      </button>
-                      <button
-                        onClick={() => { setEditingId(null); setError(''); }}
-                        className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50"
-                      >
-                        Batal
-                      </button>
-                    </div>
-                  </div>
-                );
-              }
-
               return (
-                <div key={item.id} className="flex items-center justify-between px-4 py-3">
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">
-                      {item.display_name}{' '}
-                      <span className="font-normal text-gray-400">({item.variable_key})</span>
-                      {!item.active && (
-                        <span className="ml-2 rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-500">
-                          Nonaktif
-                        </span>
-                      )}
-                    </p>
-                    <p className="text-sm text-gray-500">{item.nomor_wa}</p>
-                    {item.category && (
-                      <p className="text-xs text-gray-400">
-                        {item.category} · {item.peran || '-'}
+                <div key={item.id} className="px-4 py-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">
+                        {item.display_name}{' '}
+                        <span className="font-normal text-gray-400">({item.variable_key})</span>
+                        {!item.active && (
+                          <span className="ml-2 rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-500">
+                            Nonaktif
+                          </span>
+                        )}
                       </p>
-                    )}
+
+                      {!editing ? (
+                        <p className="text-sm text-gray-500">{item.nomor_wa}</p>
+                      ) : (
+                        <div className="mt-1 flex items-center gap-2">
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            value={editNomorWa}
+                            onChange={(e) => setEditNomorWa(normalizeNomor(e.target.value))}
+                            className="rounded-lg border border-gray-300 px-2 py-1 text-sm outline-none focus:border-gray-500"
+                          />
+                        </div>
+                      )}
+
+                      {item.category && (
+                        <p className="text-xs text-gray-400">
+                          {item.category} · {item.peran || '-'}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      {editing ? (
+                        <>
+                          <button
+                            onClick={() => saveEdit(item)}
+                            className="rounded-lg bg-gray-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-800"
+                          >
+                            Simpan
+                          </button>
+                          <button
+                            onClick={() => { setEditingId(null); setError(''); }}
+                            className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50"
+                          >
+                            Batal
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button onClick={() => startEdit(item)} className="text-sm text-gray-500 hover:text-gray-800">
+                            Edit nomor
+                          </button>
+                          <button
+                            onClick={() => toggleActive(item)}
+                            className={`text-sm ${item.active ? 'text-gray-400 hover:text-red-600' : 'text-gray-400 hover:text-green-600'}`}
+                          >
+                            {item.active ? 'Nonaktifkan' : 'Aktifkan'}
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <button onClick={() => startEdit(item)} className="text-sm text-gray-500 hover:text-gray-800">
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => toggleActive(item)}
-                      className={`text-sm ${item.active ? 'text-gray-400 hover:text-red-600' : 'text-gray-400 hover:text-green-600'}`}
-                    >
-                      {item.active ? 'Nonaktifkan' : 'Aktifkan'}
-                    </button>
-                  </div>
+                  {editing && error && <p className="mt-2 text-sm text-red-600">{error}</p>}
                 </div>
               );
             })}
