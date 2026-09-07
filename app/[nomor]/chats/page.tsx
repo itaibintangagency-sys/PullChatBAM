@@ -95,9 +95,10 @@ function ChatListContent({ nomor }: { nomor: Nomor }) {
   const internalList = filtered.filter((r) => internalSet.has(r.nomor_wa));
 
   return (
-    <div>
-      <NavHeader nomor={nomor} />
-      <main className="mx-auto max-w-5xl px-4 py-6">
+// SESUDAH — tambah pl-56 di div pembungkus
+<div className="pl-56">
+  <NavHeader nomor={nomor} />
+  <main className="mx-auto max-w-4xl px-4 py-6">
         <div className="mb-4">
           <input
             type="text"
