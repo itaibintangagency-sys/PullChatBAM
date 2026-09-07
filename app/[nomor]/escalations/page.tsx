@@ -108,7 +108,7 @@ function EscalationsContent({ nomor }: { nomor: Nomor }) {
         status: 'RESOLVED',
         resolution: resolutionText.trim(),
         resolved_at: resolvedAt.toISOString(),
-        resolution_time: `${diffHours} jam`,
+        resolution_time: `${diffHours} hours`,
       })
       .eq('id', item.id);
 
