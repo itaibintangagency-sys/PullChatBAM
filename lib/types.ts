@@ -80,3 +80,28 @@ export interface L0Config {
   created_at: string;
   updated_at: string;
 }
+
+export interface Escalation {
+  id: string;
+  ticket_id: string;
+  created_at: string;
+  bot_source: string;
+  nomor_wa: string;
+  nama: string | null;
+  category: string | null;
+  sub_category: string | null;
+  escalation_type: string | null;
+  assigned_to: string | null;
+  priority: 'HIGH' | 'MEDIUM' | 'LOW' | string | null;
+  store_link: string | null;
+  data_notes: string | null;
+  customer_issue: string | null;
+  notes: string | null;
+  status: 'OPEN' | 'RESOLVED' | string;
+  staff_contacted_at: string | null;
+  resolution: string | null;
+  resolved_at: string | null;
+  resolution_time: string | null;
+  locked_by: string | null;
+  locked_at: string | null;
+}
