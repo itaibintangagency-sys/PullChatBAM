@@ -127,3 +127,27 @@ export interface DormantEntry {
   status: string; // 'PENDING' | 'RESOLVED'
   notified_cs_bintang: boolean;
 }
+
+export interface BotDecisionLog {
+  id: string;
+  bot_source: string;
+  logged_at: string;
+  nomor_wa: string;
+  nama_brand: string | null;
+  category: string | null;
+  sub_category: string | null;
+  stage_at_log: string | null;
+  stage_prev: string | null;
+  stage_next: string | null;
+  outcome: string | null;
+  trigger_eskalasi: string | null;
+  store_link: string | null;
+  vision_check_result: string | null;
+  context_summary: string | null;
+  pesan_customer: string | null;
+  balasan_bot: string | null;
+  assigned_to: string | null;
+  routed_at: string | null;
+  status_cs: string | null;
+  created_at: string;
+}
