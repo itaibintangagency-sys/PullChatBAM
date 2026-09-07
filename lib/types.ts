@@ -52,11 +52,6 @@ export interface ReviewForm {
   created_at: string;
 }
 
-export interface StaffProfile {
-  id: string;
-  display_name: string;
-  role: 'admin' | 'staff';
-}
 
 export interface BotToggleLog {
   id: string;
