@@ -9,12 +9,12 @@ export function NavHeader({ nomor }: { nomor: Nomor }) {
   const pathname = usePathname();
   const router = useRouter();
   const { profile, signOut, setNomor } = useAuth();
-
-  const tabs = [
+  
+const tabs = [
     { href: `/${nomor}/chats`, label: 'Chat log' },
     { href: `/${nomor}/review`, label: 'Review harian' },
     { href: `/${nomor}/internal-numbers`, label: 'Nomor internal' },
-    ...(nomor === '1052' ? [{ href: `/${nomor}/bot-status`, label: 'Status Bot' }] : []),
+    { href: '/status-bot', label: 'Status Bot' },
     ...(profile?.role === 'admin' ? [{ href: '/pengaturan/staff-routing', label: 'Pengaturan' }] : []),
   ];
 
