@@ -61,6 +61,7 @@ export interface BotToggleLog {
   api_response: string | null;
   created_at: string;
 }
+
 export interface StaffProfile {
   id: string;
   display_name: string;
