@@ -16,6 +16,7 @@ export function NavHeader({ nomor }: { nomor: Nomor }) {
     { href: `/${nomor}/escalations`, label: 'Eskalasi' },
     { href: `/${nomor}/blacklist`, label: 'Blacklist' },
     { href: `/${nomor}/review`, label: 'Review harian' },
+    { href: `/${nomor}/riwayat`, label: 'Riwayat Customer' },
     { href: `/${nomor}/internal-numbers`, label: 'Nomor internal' },
     { href: '/status-bot', label: 'Status Bot' },
     ...(profile?.role === 'admin' ? [{ href: '/pengaturan/staff-routing', label: 'Pengaturan' }] : []),
