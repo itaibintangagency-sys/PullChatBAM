@@ -20,9 +20,10 @@ export function NavHeader({ nomor }: { nomor: Nomor }) {
     { href: `/${nomor}/review`, label: 'Review harian' },
     { href: `/${nomor}/riwayat`, label: 'Riwayat Customer' },
     { href: `/${nomor}/internal-numbers`, label: 'Nomor internal' },
-    { href: '/status-bot', label: 'Status Bot' },
-    ...(profile?.role === 'admin' ? [{ href: '/pengaturan/staff-routing', label: 'Pengaturan' }] : []),
-  ];
+    { href: '/status-bot', label: 'Status Bot' },...(profile?.role === 'admin' ? [
+  { href: '/pengaturan/staff-routing', label: 'Pengaturan' },
+  { href: '/pengaturan/kelola-staff', label: 'Kelola Staff' },
+] : []),
 
   function switchNomor() {
     const other: Nomor = nomor === '7484' ? '1052' : '7484';
