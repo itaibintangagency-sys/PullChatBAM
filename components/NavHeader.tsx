@@ -10,8 +10,9 @@ export function NavHeader({ nomor }: { nomor: Nomor }) {
   const router = useRouter();
   const { profile, signOut, setNomor } = useAuth();
   
-const tabs = [
+  const tabs = [
     { href: `/${nomor}/chats`, label: 'Chat log' },
+    { href: `/${nomor}/escalations`, label: 'Eskalasi' },
     { href: `/${nomor}/review`, label: 'Review harian' },
     { href: `/${nomor}/internal-numbers`, label: 'Nomor internal' },
     { href: '/status-bot', label: 'Status Bot' },
