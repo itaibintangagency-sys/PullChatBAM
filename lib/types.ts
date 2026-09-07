@@ -128,6 +128,31 @@ export interface DormantEntry {
   notified_cs_bintang: boolean;
 }
 
+export interface PhonebookEntry {
+  id: string;
+  nomor_wa: string;
+  bot_source: string;
+  nama: string | null;
+  nama_confirmed: boolean | null;
+  stage: string;
+  stage_updated_at: string | null;
+  category: string | null;
+  sub_category: string | null;
+  platform: string | null;
+  conversation_summary: string | null;
+  last_tone: string | null;
+  last_msg_at: string | null;
+  context_json: {
+    isDormant?: boolean;
+    dormantSource?: string;
+    escalationTarget?: string;
+    escalationType?: string;
+    invalidAttempts?: number;
+    ssCount?: number;
+    [key: string]: unknown;
+  } | null;
+}
+
 export interface BotDecisionLog {
   id: string;
   bot_source: string;
