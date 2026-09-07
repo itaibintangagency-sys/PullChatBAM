@@ -74,9 +74,10 @@ function InternalNumbersContent({ nomor }: { nomor: Nomor }) {
   }
 
   return (
-    <div>
-      <NavHeader nomor={nomor} />
-      <main className="mx-auto max-w-2xl px-4 py-8">
+    // SESUDAH — tambah pl-56 di div pembungkus
+<div className="pl-56">
+  <NavHeader nomor={nomor} />
+  <main className="mx-auto max-w-4xl px-4 py-6">
         <h1 className="mb-1 text-lg font-medium text-gray-900">Nomor internal</h1>
         <p className="mb-6 text-sm text-gray-500">
           Nomor kantor di sini dipisah dari kategori customer di chat log.
