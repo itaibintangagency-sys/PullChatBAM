@@ -136,9 +136,10 @@ function StaffRoutingContent() {
   }
 
   return (
-    <div>
-      <NavHeader nomor={nomor || '1052'} />
-      <main className="mx-auto max-w-3xl px-4 py-8">
+   // SESUDAH — tambah pl-56 di div pembungkus
+<div className="pl-56">
+  <NavHeader nomor={nomor} />
+  <main className="mx-auto max-w-4xl px-4 py-6">
         <h1 className="mb-1 text-lg font-medium text-gray-900">Staff &amp; routing eskalasi</h1>
         <p className="mb-6 text-sm text-gray-500">
           Daftar staff yang menerima notifikasi eskalasi dari bot. Data ini dipakai bersama oleh kedua nomor
