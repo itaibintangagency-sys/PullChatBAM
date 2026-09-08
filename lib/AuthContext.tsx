@@ -49,7 +49,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function loadProfile(userId: string) {
     const { data } = await supabase
       .from('staff_profiles')
-      .select('id, display_name, role')
+      .select('id, display_name, role, escalation_alias')
       .eq('id', userId)
       .single();
     if (data) setProfile(data as StaffProfile);
