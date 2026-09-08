@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo, use } from 'react';
 import { RequireNomor } from '@/components/RouteGuard';
 import { NavHeader } from '@/components/NavHeader';
+import { useAuth } from '@/lib/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { Nomor, Escalation } from '@/lib/types';
 import { SkeletonRow } from '@/components/Skeleton';
@@ -27,16 +28,31 @@ function priorityBadge(p: string | null) {
   return map[p || ''] || 'bg-gray-100 text-gray-500';
 }
 
+// assigned_to bisa berisi 1 nama ("RIZKI") atau beberapa dipisah koma
+// ("RINTAN, RINTAN2") untuk tiket dual-staff. Pencocokan PERSIS per-kata,
+// bukan "mengandung teks" -- supaya alias "RINTAN" tidak ikut kecantol
+// tiket yang assigned_to-nya "RINTAN2" (beda orang).
+function isAssignedToAlias(assignedTo: string | null, alias: string | null): boolean {
+  if (!alias || !assignedTo) return false;
+  const tokens = assignedTo.split(',').map((t) => t.trim());
+  return tokens.includes(alias);
+}
+
 function EscalationsContent({ nomor }: { nomor: Nomor }) {
+  const { profile } = useAuth();
   const [items, setItems] = useState<Escalation[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('OPEN');
   const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>('all');
+  const [scopeFilter, setScopeFilter] = useState<'mine' | 'all'>('mine');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [resolvingId, setResolvingId] = useState<string | null>(null);
   const [resolutionText, setResolutionText] = useState('');
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+
+  const isAdmin = profile?.role === 'admin';
+  const hasAlias = !!profile?.escalation_alias;
 
   useEffect(() => {
     load();
@@ -69,6 +85,14 @@ function EscalationsContent({ nomor }: { nomor: Nomor }) {
 
   const filtered = useMemo(() => {
     let list = items;
+
+    // Filter cakupan: staff (non-admin) defaultnya cuma lihat tiket miliknya
+    // sendiri, kecuali sengaja pilih "Semua". Admin selalu lihat semua,
+    // tombol toggle ini tidak muncul buat admin.
+    if (!isAdmin && scopeFilter === 'mine') {
+      list = list.filter((i) => isAssignedToAlias(i.assigned_to, profile?.escalation_alias || null));
+    }
+
     if (statusFilter !== 'all') list = list.filter((i) => i.status === statusFilter);
     if (priorityFilter !== 'all') list = list.filter((i) => i.priority === priorityFilter);
 
@@ -79,8 +103,15 @@ function EscalationsContent({ nomor }: { nomor: Nomor }) {
       if (pa !== pb) return pa - pb;
       return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
     });
-  }, [items, statusFilter, priorityFilter]);
+  }, [items, statusFilter, priorityFilter, scopeFilter, isAdmin, profile?.escalation_alias]);
 
+  const myOpenCount = useMemo(
+    () =>
+      items.filter(
+        (i) => i.status === 'OPEN' && isAssignedToAlias(i.assigned_to, profile?.escalation_alias || null)
+      ).length,
+    [items, profile?.escalation_alias]
+  );
   const openCount = items.filter((i) => i.status === 'OPEN').length;
 
   function startResolve(id: string) {
@@ -128,13 +159,47 @@ function EscalationsContent({ nomor }: { nomor: Nomor }) {
           <div>
             <h1 className="text-lg font-medium text-gray-900">Eskalasi</h1>
             <p className="text-sm text-gray-500">
-              {openCount > 0 ? `${openCount} tiket masih terbuka` : 'Semua tiket sudah ditangani ✅'}
+              {!isAdmin && scopeFilter === 'mine'
+                ? myOpenCount > 0
+                  ? `${myOpenCount} tiket kamu masih terbuka`
+                  : 'Semua tiket kamu sudah ditangani ✅'
+                : openCount > 0
+                ? `${openCount} tiket masih terbuka`
+                : 'Semua tiket sudah ditangani ✅'}
             </p>
           </div>
         </div>
 
+        {!isAdmin && !hasAlias && (
+          <div className="mb-4 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-700">
+            Akun kamu belum punya alias eskalasi -- minta Super Admin isi lewat halaman
+            Kelola Staff supaya tiket kamu bisa terfilter otomatis di sini.
+          </div>
+        )}
+
         {/* Controls */}
         <div className="mb-4 flex flex-wrap items-center gap-2">
+          {!isAdmin && (
+            <>
+              <button
+                onClick={() => setScopeFilter('mine')}
+                className={`rounded-lg px-3 py-1.5 text-sm ${
+                  scopeFilter === 'mine' ? 'bg-gray-900 text-white' : 'border border-gray-300 text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                Tiket Saya
+              </button>
+              <button
+                onClick={() => setScopeFilter('all')}
+                className={`rounded-lg px-3 py-1.5 text-sm ${
+                  scopeFilter === 'all' ? 'bg-gray-900 text-white' : 'border border-gray-300 text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                Semua
+              </button>
+              <span className="mx-1 text-gray-300">|</span>
+            </>
+          )}
           {(['OPEN', 'RESOLVED', 'all'] as StatusFilter[]).map((s) => (
             <button
               key={s}

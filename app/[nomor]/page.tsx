@@ -4,6 +4,7 @@ import { useEffect, useState, use } from 'react';
 import Link from 'next/link';
 import { RequireNomor } from '@/components/RouteGuard';
 import { NavHeader } from '@/components/NavHeader';
+import { useAuth } from '@/lib/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { Nomor } from '@/lib/types';
 import { SkeletonCard } from '@/components/Skeleton';
@@ -33,6 +34,14 @@ interface DormantBreakdown {
   other: number;
 }
 
+// Sama seperti di halaman Eskalasi -- pencocokan PERSIS per-kata,
+// bukan "mengandung teks", supaya "RINTAN" tidak kecantol "RINTAN2".
+function isAssignedToAlias(assignedTo: string | null, alias: string | null): boolean {
+  if (!alias || !assignedTo) return false;
+  const tokens = assignedTo.split(',').map((t) => t.trim());
+  return tokens.includes(alias);
+}
+
 function CountCard({ href, label, value, tone }: { href: string; label: string; value: number; tone: string }) {
   return (
     <Link href={href} className={`block rounded-xl border p-5 transition hover:shadow-sm ${tone}`}>
@@ -43,6 +52,10 @@ function CountCard({ href, label, value, tone }: { href: string; label: string; 
 }
 
 function DashboardContent({ nomor }: { nomor: Nomor }) {
+  const { profile } = useAuth();
+  const isAdmin = profile?.role === 'admin';
+  const myAlias = profile?.escalation_alias || null;
+
   const [loading, setLoading] = useState(true);
   const [counts, setCounts] = useState<Counts>({
     escalationsOpen: 0,
@@ -50,6 +63,7 @@ function DashboardContent({ nomor }: { nomor: Nomor }) {
     blacklistTotal: 0,
     phonebookTotal: 0,
   });
+  const [myOpenCount, setMyOpenCount] = useState(0);
   const [staffLoad, setStaffLoad] = useState<StaffLoad[]>([]);
   const [priority, setPriority] = useState<PriorityBreakdown>({ HIGH: 0, MEDIUM: 0, LOW: 0, other: 0 });
   const [dormantSrc, setDormantSrc] = useState<DormantBreakdown>({ HANDOFF: 0, BUNTU_9X: 0, other: 0 });
@@ -57,7 +71,7 @@ function DashboardContent({ nomor }: { nomor: Nomor }) {
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [nomor]);
+  }, [nomor, myAlias]);
 
   async function load() {
     setLoading(true);
@@ -81,12 +95,14 @@ function DashboardContent({ nomor }: { nomor: Nomor }) {
     // Beban kerja per staff -- dihitung di sisi client dari baris OPEN
     const loadMap: Record<string, number> = {};
     const prio: PriorityBreakdown = { HIGH: 0, MEDIUM: 0, LOW: 0, other: 0 };
+    let myCount = 0;
     (escOpenRows.data || []).forEach((r: { assigned_to: string | null; priority: string | null }) => {
       const staff = r.assigned_to || 'Belum ditugaskan';
       loadMap[staff] = (loadMap[staff] || 0) + 1;
       const p = r.priority;
       if (p === 'HIGH' || p === 'MEDIUM' || p === 'LOW') prio[p]++;
       else prio.other++;
+      if (isAssignedToAlias(r.assigned_to, myAlias)) myCount++;
     });
     setStaffLoad(
       Object.entries(loadMap)
@@ -94,6 +110,7 @@ function DashboardContent({ nomor }: { nomor: Nomor }) {
         .sort((a, b) => b.count - a.count)
     );
     setPriority(prio);
+    setMyOpenCount(myCount);
 
     const dorm: DormantBreakdown = { HANDOFF: 0, BUNTU_9X: 0, other: 0 };
     (dormantRows.data || []).forEach((r: { source: string | null }) => {
@@ -113,6 +130,13 @@ function DashboardContent({ nomor }: { nomor: Nomor }) {
         <h1 className="mb-1 text-lg font-medium text-gray-900">Dashboard</h1>
         <p className="mb-6 text-sm text-gray-500">Ringkasan cepat bot {nomor}.</p>
 
+        {!isAdmin && !myAlias && (
+          <div className="mb-4 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-700">
+            Akun kamu belum punya alias eskalasi -- minta Super Admin isi lewat halaman
+            Kelola Staff supaya jumlah tiket kamu bisa ditampilkan di sini.
+          </div>
+        )}
+
         {loading ? (
           <div className="space-y-6">
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -128,8 +152,8 @@ function DashboardContent({ nomor }: { nomor: Nomor }) {
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               <CountCard
                 href={`/${nomor}/escalations`}
-                label="Eskalasi terbuka"
-                value={counts.escalationsOpen}
+                label={isAdmin ? 'Eskalasi terbuka' : 'Tiket kamu terbuka'}
+                value={isAdmin ? counts.escalationsOpen : myOpenCount}
                 tone="border-red-200 bg-red-50 text-red-800"
               />
               <CountCard
@@ -152,30 +176,34 @@ function DashboardContent({ nomor }: { nomor: Nomor }) {
               />
             </div>
 
-            {/* Beban kerja per staff */}
-            <div>
-              <p className="mb-2 text-sm font-medium text-gray-900">Beban kerja staff (eskalasi terbuka)</p>
-              {staffLoad.length === 0 ? (
-                <p className="text-sm text-gray-400">Tidak ada eskalasi terbuka saat ini.</p>
-              ) : (
-                <div className="space-y-1 rounded-xl border border-gray-200 bg-white p-3">
-                  {staffLoad.map((s) => (
-                    <div key={s.name} className="flex items-center gap-3">
-                      <span className="w-32 shrink-0 truncate text-sm text-gray-700">{s.name}</span>
-                      <div className="h-2 flex-1 overflow-hidden rounded-full bg-gray-100">
-                        <div
-                          className="h-full rounded-full bg-gray-900"
-                          style={{ width: `${(s.count / staffLoad[0].count) * 100}%` }}
-                        />
+            {/* Beban kerja per staff -- cuma buat admin, staff tidak perlu
+                lihat perbandingan beban kerja kolega lain */}
+            {isAdmin && (
+              <div>
+                <p className="mb-2 text-sm font-medium text-gray-900">Beban kerja staff (eskalasi terbuka)</p>
+                {staffLoad.length === 0 ? (
+                  <p className="text-sm text-gray-400">Tidak ada eskalasi terbuka saat ini.</p>
+                ) : (
+                  <div className="space-y-1 rounded-xl border border-gray-200 bg-white p-3">
+                    {staffLoad.map((s) => (
+                      <div key={s.name} className="flex items-center gap-3">
+                        <span className="w-32 shrink-0 truncate text-sm text-gray-700">{s.name}</span>
+                        <div className="h-2 flex-1 overflow-hidden rounded-full bg-gray-100">
+                          <div
+                            className="h-full rounded-full bg-gray-900"
+                            style={{ width: `${(s.count / staffLoad[0].count) * 100}%` }}
+                          />
+                        </div>
+                        <span className="w-6 shrink-0 text-right text-sm text-gray-500">{s.count}</span>
                       </div>
-                      <span className="w-6 shrink-0 text-right text-sm text-gray-500">{s.count}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
-            {/* 2 kolom breakdown */}
+            {/* 2 kolom breakdown -- tetap tampil buat semua role, ini
+                gambaran umum sistem, bukan data personal per-staff */}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
                 <p className="mb-2 text-sm font-medium text-gray-900">Prioritas eskalasi terbuka</p>
