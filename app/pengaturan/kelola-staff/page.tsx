@@ -27,9 +27,14 @@ function KelolaStaffContent() {
   const [newEmail, setNewEmail] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [newDisplayName, setNewDisplayName] = useState('');
+  const [newEscalationAlias, setNewEscalationAlias] = useState('');
   const [addError, setAddError] = useState('');
   const [addSuccess, setAddSuccess] = useState('');
   const [adding, setAdding] = useState(false);
+
+  // Edit alias untuk staff yang sudah ada
+  const [editingAliasId, setEditingAliasId] = useState<string | null>(null);
+  const [aliasDraft, setAliasDraft] = useState('');
 
   useEffect(() => {
     load();
@@ -49,6 +54,27 @@ function KelolaStaffContent() {
     setSavingId(null);
     if (updateError) {
       setError('Gagal mengubah role. Coba lagi.');
+      return;
+    }
+    load();
+  }
+
+  function startEditAlias(p: StaffProfile) {
+    setEditingAliasId(p.id);
+    setAliasDraft(p.escalation_alias || '');
+  }
+
+  async function saveAlias(id: string) {
+    setError('');
+    setSavingId(id);
+    const { error: updateError } = await supabase
+      .from('staff_profiles')
+      .update({ escalation_alias: aliasDraft.trim() || null })
+      .eq('id', id);
+    setSavingId(null);
+    setEditingAliasId(null);
+    if (updateError) {
+      setError('Gagal menyimpan alias. Coba lagi.');
       return;
     }
     load();
@@ -88,6 +114,7 @@ function KelolaStaffContent() {
         email: newEmail.trim(),
         password: newPassword,
         displayName: newDisplayName.trim(),
+        escalationAlias: newEscalationAlias.trim(),
       }),
     });
     const result = await res.json();
@@ -102,6 +129,7 @@ function KelolaStaffContent() {
     setNewEmail('');
     setNewPassword('');
     setNewDisplayName('');
+    setNewEscalationAlias('');
     load();
   }
 
@@ -139,9 +167,17 @@ function KelolaStaffContent() {
               onChange={(e) => setNewPassword(e.target.value)}
               className="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-gray-500"
             />
+            <input
+              type="text"
+              placeholder="Alias eskalasi (opsional, contoh: RIZKI)"
+              value={newEscalationAlias}
+              onChange={(e) => setNewEscalationAlias(e.target.value)}
+              className="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-gray-500 sm:col-span-2"
+            />
           </div>
           <p className="mt-2 text-xs text-gray-400">
             Akun baru selalu dibuat dengan role &quot;Staff&quot; — ubah jadi admin lewat daftar di bawah kalau perlu.
+            Alias eskalasi dipakai untuk cocokkan tiket di tabel escalations (kolom assigned_to) dengan akun ini.
           </p>
           {addError && <p className="mt-2 text-sm text-red-600">{addError}</p>}
           {addSuccess && <p className="mt-2 text-sm text-green-600">{addSuccess}</p>}
@@ -165,10 +201,11 @@ function KelolaStaffContent() {
               const isMe = p.id === myProfile?.id;
               const isSaving = savingId === p.id;
               const lastAdminGuard = p.role === 'admin' && adminCount === 1;
+              const isEditingAlias = editingAliasId === p.id;
 
               return (
-                <div key={p.id} className="flex items-center justify-between px-4 py-3">
-                  <div>
+                <div key={p.id} className="flex items-center justify-between gap-3 px-4 py-3">
+                  <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium text-gray-900">
                       {p.display_name}
                       {isMe && <span className="ml-2 text-xs text-gray-400">(akun kamu)</span>}
@@ -176,14 +213,49 @@ function KelolaStaffContent() {
                     <span className={`mt-1 inline-block rounded px-2 py-0.5 text-xs font-medium ${roleBadgeClass(p.role)}`}>
                       {ROLE_LABELS[p.role] || p.role}
                     </span>
+
+                    <div className="mt-2">
+                      {isEditingAlias ? (
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            autoFocus
+                            value={aliasDraft}
+                            onChange={(e) => setAliasDraft(e.target.value)}
+                            placeholder="Alias eskalasi"
+                            className="rounded border border-gray-300 px-2 py-1 text-xs outline-none focus:border-gray-500"
+                          />
+                          <button
+                            onClick={() => saveAlias(p.id)}
+                            disabled={isSaving}
+                            className="text-xs font-medium text-gray-900 hover:underline disabled:opacity-40"
+                          >
+                            Simpan
+                          </button>
+                          <button
+                            onClick={() => setEditingAliasId(null)}
+                            className="text-xs text-gray-400 hover:underline"
+                          >
+                            Batal
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => startEditAlias(p)}
+                          className="text-xs text-gray-400 hover:text-gray-600 hover:underline"
+                        >
+                          Alias eskalasi: {p.escalation_alias || <span className="italic">belum diisi</span>}
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   {isMe ? (
-                    <span className="text-xs text-gray-400" title="Tidak bisa ubah role sendiri, biar tidak sengaja terkunci">
+                    <span className="shrink-0 text-xs text-gray-400" title="Tidak bisa ubah role sendiri, biar tidak sengaja terkunci">
                       Tidak bisa diubah sendiri
                     </span>
                   ) : (
-                    <div className="flex gap-2">
+                    <div className="flex shrink-0 gap-2">
                       {p.role !== 'staff' && (
                         <button
                           onClick={() => changeRole(p.id, 'staff')}

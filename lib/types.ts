@@ -65,7 +65,8 @@ export interface BotToggleLog {
 export interface StaffProfile {
   id: string;
   display_name: string;
-  role: 'admin' | 'staff'; // TODO: tambah 'm_level' nanti pas role itu dirilis
+  role: 'admin' | 'staff';
+  escalation_alias: string | null;
 }
 
 export interface L0Config {

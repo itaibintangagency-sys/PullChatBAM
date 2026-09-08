@@ -36,8 +36,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Cuma admin yang boleh menambah staff' }, { status: 403 });
   }
 
-  // 2. Validasi input
-  const { email, password, displayName } = await request.json();
+  // 2. Validasi input (escalationAlias opsional -- boleh kosong)
+  const { email, password, displayName, escalationAlias } = await request.json();
   if (!email || !password || !displayName) {
     return NextResponse.json({ error: 'Email, password, dan nama wajib diisi' }, { status: 400 });
   }
@@ -59,10 +59,13 @@ export async function POST(request: NextRequest) {
   }
 
   // 4. Trigger otomatis sudah bikin baris staff_profiles (role default 'staff') --
-  // tinggal isi display_name-nya
+  // tinggal isi display_name & escalation_alias-nya
   const { error: updateError } = await adminClient
     .from('staff_profiles')
-    .update({ display_name: displayName })
+    .update({
+      display_name: displayName,
+      escalation_alias: escalationAlias?.trim() || null,
+    })
     .eq('id', newUser.user.id);
 
   if (updateError) {
