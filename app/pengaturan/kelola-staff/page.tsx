@@ -12,6 +12,22 @@ const ROLE_LABELS: Record<string, string> = {
   staff: 'Staff',
 };
 
+// Nilai persis yang muncul di kolom escalations.assigned_to sekarang
+// (dicek langsung dari data, bukan tebakan -- kalau nanti ada nama
+// staff baru yang dipakai di l0_config untuk eskalasi, tambahkan di sini juga)
+const ESCALATION_ALIAS_OPTIONS = [
+  'SAGETA',
+  'STAF_COMUNITY',
+  'INDAH',
+  'YUL',
+  'YOAN',
+  'RINTAN',
+  'RINTAN2',
+  'RIZKI',
+  'SALMA',
+  'CS',
+];
+
 function roleBadgeClass(role: string) {
   return role === 'admin' ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600';
 }
@@ -31,10 +47,6 @@ function KelolaStaffContent() {
   const [addError, setAddError] = useState('');
   const [addSuccess, setAddSuccess] = useState('');
   const [adding, setAdding] = useState(false);
-
-  // Edit alias untuk staff yang sudah ada
-  const [editingAliasId, setEditingAliasId] = useState<string | null>(null);
-  const [aliasDraft, setAliasDraft] = useState('');
 
   useEffect(() => {
     load();
@@ -59,20 +71,15 @@ function KelolaStaffContent() {
     load();
   }
 
-  function startEditAlias(p: StaffProfile) {
-    setEditingAliasId(p.id);
-    setAliasDraft(p.escalation_alias || '');
-  }
-
-  async function saveAlias(id: string) {
+  // Update langsung begitu dropdown dipilih -- tanpa tombol simpan terpisah
+  async function updateAlias(id: string, alias: string) {
     setError('');
     setSavingId(id);
     const { error: updateError } = await supabase
       .from('staff_profiles')
-      .update({ escalation_alias: aliasDraft.trim() || null })
+      .update({ escalation_alias: alias || null })
       .eq('id', id);
     setSavingId(null);
-    setEditingAliasId(null);
     if (updateError) {
       setError('Gagal menyimpan alias. Coba lagi.');
       return;
@@ -114,7 +121,7 @@ function KelolaStaffContent() {
         email: newEmail.trim(),
         password: newPassword,
         displayName: newDisplayName.trim(),
-        escalationAlias: newEscalationAlias.trim(),
+        escalationAlias: newEscalationAlias,
       }),
     });
     const result = await res.json();
@@ -167,13 +174,16 @@ function KelolaStaffContent() {
               onChange={(e) => setNewPassword(e.target.value)}
               className="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-gray-500"
             />
-            <input
-              type="text"
-              placeholder="Alias eskalasi (opsional, contoh: RIZKI)"
+            <select
               value={newEscalationAlias}
               onChange={(e) => setNewEscalationAlias(e.target.value)}
-              className="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-gray-500 sm:col-span-2"
-            />
+              className="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-600 outline-none focus:border-gray-500 sm:col-span-2"
+            >
+              <option value="">Alias eskalasi (opsional)</option>
+              {ESCALATION_ALIAS_OPTIONS.map((opt) => (
+                <option key={opt} value={opt}>{opt}</option>
+              ))}
+            </select>
           </div>
           <p className="mt-2 text-xs text-gray-400">
             Akun baru selalu dibuat dengan role &quot;Staff&quot; — ubah jadi admin lewat daftar di bawah kalau perlu.
@@ -201,7 +211,6 @@ function KelolaStaffContent() {
               const isMe = p.id === myProfile?.id;
               const isSaving = savingId === p.id;
               const lastAdminGuard = p.role === 'admin' && adminCount === 1;
-              const isEditingAlias = editingAliasId === p.id;
 
               return (
                 <div key={p.id} className="flex items-center justify-between gap-3 px-4 py-3">
@@ -214,39 +223,19 @@ function KelolaStaffContent() {
                       {ROLE_LABELS[p.role] || p.role}
                     </span>
 
-                    <div className="mt-2">
-                      {isEditingAlias ? (
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="text"
-                            autoFocus
-                            value={aliasDraft}
-                            onChange={(e) => setAliasDraft(e.target.value)}
-                            placeholder="Alias eskalasi"
-                            className="rounded border border-gray-300 px-2 py-1 text-xs outline-none focus:border-gray-500"
-                          />
-                          <button
-                            onClick={() => saveAlias(p.id)}
-                            disabled={isSaving}
-                            className="text-xs font-medium text-gray-900 hover:underline disabled:opacity-40"
-                          >
-                            Simpan
-                          </button>
-                          <button
-                            onClick={() => setEditingAliasId(null)}
-                            className="text-xs text-gray-400 hover:underline"
-                          >
-                            Batal
-                          </button>
-                        </div>
-                      ) : (
-                        <button
-                          onClick={() => startEditAlias(p)}
-                          className="text-xs text-gray-400 hover:text-gray-600 hover:underline"
-                        >
-                          Alias eskalasi: {p.escalation_alias || <span className="italic">belum diisi</span>}
-                        </button>
-                      )}
+                    <div className="mt-2 flex items-center gap-2">
+                      <span className="text-xs text-gray-400">Alias eskalasi:</span>
+                      <select
+                        value={p.escalation_alias || ''}
+                        onChange={(e) => updateAlias(p.id, e.target.value)}
+                        disabled={isSaving}
+                        className="rounded border border-gray-200 bg-gray-50 px-2 py-1 text-xs text-gray-700 outline-none focus:border-gray-400 disabled:opacity-40"
+                      >
+                        <option value="">— belum diisi —</option>
+                        {ESCALATION_ALIAS_OPTIONS.map((opt) => (
+                          <option key={opt} value={opt}>{opt}</option>
+                        ))}
+                      </select>
                     </div>
                   </div>
 
