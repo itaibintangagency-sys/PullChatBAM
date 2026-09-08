@@ -99,10 +99,19 @@ function DashboardContent({ nomor }: { nomor: Nomor }) {
     (escOpenRows.data || []).forEach((r: { assigned_to: string | null; priority: string | null }) => {
       const staff = r.assigned_to || 'Belum ditugaskan';
       loadMap[staff] = (loadMap[staff] || 0) + 1;
-      const p = r.priority;
-      if (p === 'HIGH' || p === 'MEDIUM' || p === 'LOW') prio[p]++;
-      else prio.other++;
-      if (isAssignedToAlias(r.assigned_to, myAlias)) myCount++;
+      const isMine = isAssignedToAlias(r.assigned_to, myAlias);
+      if (isMine) myCount++;
+
+      // Admin lihat breakdown prioritas GLOBAL (semua tiket).
+      // Staff lihat breakdown prioritas cuma dari tiket MILIKNYA sendiri --
+      // biar konsisten sama kartu "Tiket kamu terbuka" di atas, bukan
+      // angka perusahaan yang tidak nyambung ke miliknya.
+      const countThis = isAdmin || isMine;
+      if (countThis) {
+        const p = r.priority;
+        if (p === 'HIGH' || p === 'MEDIUM' || p === 'LOW') prio[p]++;
+        else prio.other++;
+      }
     });
     setStaffLoad(
       Object.entries(loadMap)
@@ -206,7 +215,9 @@ function DashboardContent({ nomor }: { nomor: Nomor }) {
                 gambaran umum sistem, bukan data personal per-staff */}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
-                <p className="mb-2 text-sm font-medium text-gray-900">Prioritas eskalasi terbuka</p>
+                <p className="mb-2 text-sm font-medium text-gray-900">
+                  {isAdmin ? 'Prioritas eskalasi terbuka' : 'Prioritas tiket kamu'}
+                </p>
                 <div className="space-y-1 rounded-xl border border-gray-200 bg-white p-3 text-sm">
                   <div className="flex justify-between"><span className="text-red-600">HIGH</span><span>{priority.HIGH}</span></div>
                   <div className="flex justify-between"><span className="text-amber-600">MEDIUM</span><span>{priority.MEDIUM}</span></div>
