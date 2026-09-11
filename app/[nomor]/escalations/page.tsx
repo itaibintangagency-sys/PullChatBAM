@@ -135,7 +135,7 @@ function EscalationsContent({ nomor }: { nomor: Nomor }) {
     const { error: updateError } = await supabase
       .from('escalations')
       .update({
-        status: 'RESOLVED',
+        status: 'RESOLVE',
         resolution: resolutionText.trim(),
         resolved_at: resolvedAt.toISOString(),
         resolution_time: `${diffHours} hours`,
@@ -200,7 +200,7 @@ function EscalationsContent({ nomor }: { nomor: Nomor }) {
               <span className="mx-1 text-gray-300">|</span>
             </>
           )}
-          {(['OPEN', 'RESOLVED', 'all'] as StatusFilter[]).map((s) => (
+          {(['OPEN', 'RESOLVE', 'all'] as StatusFilter[]).map((s) => (
             <button
               key={s}
               onClick={() => setStatusFilter(s)}
@@ -208,7 +208,7 @@ function EscalationsContent({ nomor }: { nomor: Nomor }) {
                 statusFilter === s ? 'bg-gray-900 text-white' : 'border border-gray-300 text-gray-600 hover:bg-gray-50'
               }`}
             >
-              {s === 'OPEN' ? 'Terbuka' : s === 'RESOLVED' ? 'Selesai' : 'Semua'}
+              {s === 'OPEN' ? 'Terbuka' : s === 'RESOLVE' ? 'Selesai' : 'Semua'}
             </button>
           ))}
           <select
@@ -257,7 +257,7 @@ function EscalationsContent({ nomor }: { nomor: Nomor }) {
                     </div>
                     <div className="flex items-center gap-2 text-xs text-gray-400">
                       <span>{item.assigned_to || 'Belum ditugaskan'}</span>
-                      {item.status === 'RESOLVED' && (
+                      {item.status === 'RESOLVE' && (
                         <span className="rounded bg-green-100 px-2 py-0.5 text-green-700">Selesai</span>
                       )}
                     </div>
@@ -290,7 +290,7 @@ function EscalationsContent({ nomor }: { nomor: Nomor }) {
                             <dd className="text-gray-700">{item.customer_issue || item.data_notes}</dd>
                           </div>
                         )}
-                        {item.status === 'RESOLVED' && (
+                        {item.status === 'RESOLVE' && (
                           <div className="sm:col-span-2 rounded-lg bg-green-50 p-2">
                             <dt className="text-xs text-green-700">Penyelesaian ({item.resolution_time})</dt>
                             <dd className="text-green-800">{item.resolution}</dd>
