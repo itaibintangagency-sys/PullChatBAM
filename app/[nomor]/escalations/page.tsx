@@ -8,7 +8,7 @@ import { supabase } from '@/lib/supabase';
 import { Nomor, Escalation } from '@/lib/types';
 import { SkeletonRow } from '@/components/Skeleton';
 
-type StatusFilter = 'OPEN' | 'RESOLVED' | 'all';
+type StatusFilter = 'OPEN' | 'RESOLVE' | 'all';
 type PriorityFilter = 'all' | 'HIGH' | 'MEDIUM' | 'LOW';
 
 function timeSince(dateStr: string): string {
