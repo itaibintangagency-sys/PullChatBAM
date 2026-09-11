@@ -177,3 +177,14 @@ export interface BotDecisionLog {
   status_cs: string | null;
   created_at: string;
 }
+
+export interface PhonebookListEntry {
+  id: string;
+  nomor_wa: string;
+  bot_source: string;
+  nama: string | null;
+  stage: string;
+  category: string | null;
+  last_msg_at: string | null;
+}
+ 
