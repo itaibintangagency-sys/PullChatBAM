@@ -12,6 +12,7 @@ export function NavHeader({ nomor }: { nomor: Nomor }) {
 
   const tabs = [
     { href: `/${nomor}`, label: 'Dashboard' }, 
+    { href: '/phonebook', label: 'Phonebook' },
     { href: '/legenda', label: 'Legenda & Panduan' }, 
     { href: `/${nomor}/chats`, label: 'Chat log' },       
     { href: `/${nomor}/profil`, label: 'Profil Customer' },
