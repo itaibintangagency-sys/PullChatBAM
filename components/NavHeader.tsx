@@ -15,7 +15,7 @@ export function NavHeader({ nomor }: { nomor: Nomor }) {
     { href: '/phonebook', label: 'Phonebook' },
     { href: '/legenda', label: 'Legenda & Panduan' }, 
     { href: `/${nomor}/chats`, label: 'Chat log' },       
-    { href: `/${nomor}/profil`, label: 'Profil Customer' },
+    { href: `/profil`, label: 'Profil Customer' },
     { href: `/${nomor}/dormant`, label: 'Dormant' }, 
     { href: `/${nomor}/escalations`, label: 'Eskalasi' },
     { href: `/${nomor}/blacklist`, label: 'Blacklist' },
