@@ -188,3 +188,11 @@ export interface PhonebookListEntry {
   last_msg_at: string | null;
 }
  
+export interface GroupedCustomer {
+  nomor_wa: string;
+  nama: string | null;
+  bots: string[];
+  category: string | null;
+  stage: string;
+  last_msg_at: string | null;
+}
