@@ -219,7 +219,7 @@ function BotStatusContent() {
     <div className="pl-56">
       <NavHeader nomor={nomor || '1052'} />
       <main className="mx-auto max-w-4xl px-4 py-6">
-        <h1 className="mb-1 text-lg font-medium text-gray-900">Status Bot</h1>
+        <h1 className="mb-1 text-xl font-semibold tracking-tight text-gray-900">Status Bot</h1>
         <p className="mb-6 text-sm text-gray-500">
           Berlaku untuk kedua nomor bot (7484 &amp; 1052) — kill-switch-nya sudah disatukan.
         </p>
@@ -241,7 +241,7 @@ function BotStatusContent() {
                 </p>
               </div>
               {currentStatus && (
-                <p className="mt-1 text-xs text-gray-500">
+                <p className="mt-1 text-xs italic text-gray-500">
                   Terakhir diubah {new Date(currentStatus.created_at).toLocaleString('id-ID')}
                   {currentStatus.triggered_by ? ` oleh ${currentStatus.triggered_by}` : ''}
                 </p>
@@ -260,7 +260,7 @@ function BotStatusContent() {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
-            className="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700"
+            className="rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700"
           >
             <option value="all">Semua Status</option>
             <option value="success">Sukses</option>
@@ -270,7 +270,7 @@ function BotStatusContent() {
           <select
             value={String(perPage)}
             onChange={(e) => setPerPage(e.target.value === 'all' ? 'all' : (Number(e.target.value) as PerPage))}
-            className="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700"
+            className="rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700"
           >
             <option value="50">50 / halaman</option>
             <option value="100">100 / halaman</option>
@@ -279,7 +279,7 @@ function BotStatusContent() {
 
           <button
             onClick={exportCsv}
-            className="ml-auto rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+            className="ml-auto rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
             ↓ Export CSV ({filtered.length})
           </button>
@@ -333,9 +333,9 @@ function BotStatusContent() {
         )}
 
         {/* Sistem Terhubung -- daftar workflow n8n yang menopang Kirana Monitor,
-            dikelompokkan per kategori. Baris "↳" menunjukkan relasi panggil-memanggil
-            antar workflow (khusus yang saling terhubung). */}
-        <h2 className="mb-1 mt-10 text-base font-medium text-gray-900">Sistem Terhubung (n8n)</h2>
+            dikelompokkan per kategori. Baris "↳" (italic) menunjukkan relasi
+            panggil-memanggil antar workflow (khusus yang saling terhubung). */}
+        <h2 className="mb-1 mt-10 text-base font-semibold text-gray-900">Sistem Terhubung (n8n)</h2>
         <p className="mb-4 text-sm text-gray-500">
           Daftar workflow n8n yang terhubung ke Kirana Monitor. Daftar ini dikelola manual — update langsung di kode kalau ada workflow baru, kategori baru, atau ada yang berubah fungsi.
         </p>
@@ -357,7 +357,7 @@ function BotStatusContent() {
                         {sys.relations && sys.relations.length > 0 && (
                           <div className="mt-1.5 space-y-0.5">
                             {sys.relations.map((r, i) => (
-                              <p key={i} className="text-xs text-gray-400">
+                              <p key={i} className="text-xs italic text-gray-400">
                                 ↳ {r}
                               </p>
                             ))}
@@ -368,7 +368,7 @@ function BotStatusContent() {
                         href={sys.n8nUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="shrink-0 whitespace-nowrap text-sm text-gray-400 hover:text-gray-700"
+                        className="shrink-0 whitespace-nowrap text-sm font-medium text-gray-400 hover:text-gray-700"
                       >
                         Buka di n8n ↗
                       </a>

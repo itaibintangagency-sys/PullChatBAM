@@ -73,8 +73,10 @@ export function NavHeader({ nomor }: { nomor: Nomor }) {
     return pathname === href || pathname?.startsWith(href + '/');
   }
 
+  // Tier "Interaktif" di type scale: semua link nav dapat font-medium, biar
+  // kebeda dari body text biasa yang regular.
   function linkClass(active: boolean) {
-    return `block rounded-lg px-3 py-2 text-sm ${
+    return `block rounded-lg px-3 py-2 text-sm font-medium ${
       active ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-100'
     }`;
   }
@@ -89,7 +91,7 @@ export function NavHeader({ nomor }: { nomor: Nomor }) {
     <aside className="fixed left-0 top-0 flex h-screen w-56 flex-col border-r border-gray-200 bg-white">
       {/* Logo & nomor aktif */}
       <div className="border-b border-gray-100 px-4 py-4">
-        <p className="text-sm font-medium text-gray-900">Kirana Monitor</p>
+        <p className="text-sm font-semibold text-gray-900">Kirana Monitor</p>
         <p className="text-xs text-gray-500">{NOMOR_LABELS[nomor]}</p>
       </div>
 
@@ -124,7 +126,7 @@ export function NavHeader({ nomor }: { nomor: Nomor }) {
       <div className="space-y-2 border-t border-gray-100 px-4 py-4">
         <button
           onClick={switchNomor}
-          className="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-1.5 text-left text-sm text-gray-700 hover:bg-gray-100"
+          className="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-1.5 text-left text-sm font-medium text-gray-700 hover:bg-gray-100"
         >
           ⇄ Ganti nomor
         </button>
