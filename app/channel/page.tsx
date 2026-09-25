@@ -151,7 +151,9 @@ function ChannelContent() {
     } finally {
       setActionLoading(null);
     }
-      async function clearHistory() {
+  }
+
+  async function clearHistory() {
     if (!session) return;
     if (!confirm('Hapus SEMUA history broadcast? Tindakan ini tidak bisa dibatalkan.')) return;
     setClearing(true);
@@ -172,7 +174,6 @@ function ChannelContent() {
     } finally {
       setClearing(false);
     }
-  }
   }
 
   function formatReactions(r: Record<string, number> | null) {
@@ -282,7 +283,7 @@ function ChannelContent() {
 
             <div className="grid grid-cols-3 gap-4">
               {/* ===== Bagian 3: Feed Histori Broadcast ===== */}
-              <div className="col-span-2">                
+              <div className="col-span-2">
                 <div className="mb-2 flex items-center justify-between">
                   <h2 className="text-sm font-semibold text-gray-700">Histori Broadcast</h2>
                   {logs.length > 0 && (
