@@ -26,6 +26,7 @@ export function NavHeader({ nomor }: { nomor: Nomor }) {
     { href: '/status-bot', label: 'Status Bot' },...(profile?.role === 'admin' ? [
   { href: '/pengaturan/staff-routing', label: 'Pengaturan' },
   { href: '/pengaturan/kelola-staff', label: 'Kelola Staff' },
+  { href: '/channel', label: 'Channel WA' },
 ] : []),
 ];
   
