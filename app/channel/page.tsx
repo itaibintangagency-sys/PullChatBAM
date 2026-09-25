@@ -66,6 +66,7 @@ function ChannelContent() {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<CommandAction | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [clearing, setClearing] = useState(false);
 
   const loadAll = useCallback(async () => {
     const [controlRes, pendingRes, logsRes, brandRes] = await Promise.all([
