@@ -12,6 +12,85 @@ type PerPage = 50 | 100 | 'all';
 type SortKey = 'action' | 'status' | 'created_at';
 type SortDir = 'asc' | 'desc';
 
+interface ConnectedSystem {
+  id: string;
+  name: string;
+  description: string;
+  n8nUrl: string;
+}
+
+// Daftar manual -- update di sini kalau ada workflow baru yang terhubung ke
+// Kirana Monitor. TODO: Patrik, tolong isi name & description masing-masing
+// (n8n editor perlu login, jadi ga bisa dibaca otomatis dari sini).
+const CONNECTED_SYSTEMS: ConnectedSystem[] = [
+  {
+    id: '1',
+    name: 'TODO: isi nama workflow',
+    description: 'TODO: isi fungsi singkat',
+    n8nUrl: 'https://n8n-crfkzibn5git.jkt3.sumopod.my.id/workflow/k7R1YsdYmxMvZkkJ',
+  },
+  {
+    id: '2',
+    name: 'TODO: isi nama workflow',
+    description: 'TODO: isi fungsi singkat',
+    n8nUrl: 'https://n8n-crfkzibn5git.jkt3.sumopod.my.id/workflow/MdoDzcH0D3r8XsWb',
+  },
+  {
+    id: '3',
+    name: 'TODO: isi nama workflow',
+    description: 'TODO: isi fungsi singkat',
+    n8nUrl: 'https://n8n-crfkzibn5git.jkt3.sumopod.my.id/workflow/xaLrH3EDMDq9kHO7',
+  },
+  {
+    id: '4',
+    name: 'TODO: isi nama workflow',
+    description: 'TODO: isi fungsi singkat',
+    n8nUrl: 'https://n8n-crfkzibn5git.jkt3.sumopod.my.id/workflow/UlL1qwZ3mhx07NDV',
+  },
+  {
+    id: '5',
+    name: 'TODO: isi nama workflow',
+    description: 'TODO: isi fungsi singkat',
+    n8nUrl: 'https://n8n-crfkzibn5git.jkt3.sumopod.my.id/workflow/oQ9G8xozbzZp64yE',
+  },
+  {
+    id: '6',
+    name: 'TODO: isi nama workflow',
+    description: 'TODO: isi fungsi singkat',
+    n8nUrl: 'https://n8n-crfkzibn5git.jkt3.sumopod.my.id/workflow/HrGbVvIA5RiDzHvq',
+  },
+  {
+    id: '7',
+    name: 'TODO: isi nama workflow',
+    description: 'TODO: isi fungsi singkat',
+    n8nUrl: 'https://n8n-crfkzibn5git.jkt3.sumopod.my.id/workflow/w1BS525iVEp6Ch3R',
+  },
+  {
+    id: '8',
+    name: 'TODO: isi nama workflow',
+    description: 'TODO: isi fungsi singkat',
+    n8nUrl: 'https://n8n-crfkzibn5git.jkt3.sumopod.my.id/workflow/Xg34nPNQ5a1exVML',
+  },
+  {
+    id: '9',
+    name: 'TODO: isi nama workflow',
+    description: 'TODO: isi fungsi singkat',
+    n8nUrl: 'https://n8n-crfkzibn5git.jkt3.sumopod.my.id/workflow/L27QQJxlaC2xwH1f',
+  },
+  {
+    id: '10',
+    name: 'TODO: isi nama workflow',
+    description: 'TODO: isi fungsi singkat',
+    n8nUrl: 'https://n8n-crfkzibn5git.jkt3.sumopod.my.id/workflow/vzBgNkpxyUPErtlo',
+  },
+  {
+    id: '11',
+    name: 'TODO: isi nama workflow',
+    description: 'TODO: isi fungsi singkat',
+    n8nUrl: 'https://n8n-crfkzibn5git.jkt3.sumopod.my.id/workflow/w0GOG5laec87G84T',
+  },
+];
+
 function BotStatusContent() {
   const { nomor } = useAuth();
   const [logs, setLogs] = useState<BotToggleLog[]>([]);
@@ -101,7 +180,7 @@ function BotStatusContent() {
 
   const SortArrow = ({ col }: { col: SortKey }) =>
     sortKey === col ? <span className="ml-1 text-xs">{sortDir === 'asc' ? '↑' : '↓'}</span> : null;
-  
+
   return (
     <div className="pl-56">
       <NavHeader nomor={nomor || '1052'} />
@@ -218,6 +297,30 @@ function BotStatusContent() {
             </table>
           </div>
         )}
+
+        {/* Sistem Terhubung -- daftar workflow n8n yang menopang Kirana Monitor */}
+        <h2 className="mb-1 mt-10 text-base font-medium text-gray-900">Sistem Terhubung (n8n)</h2>
+        <p className="mb-4 text-sm text-gray-500">
+          Daftar workflow n8n yang terhubung ke Kirana Monitor. Daftar ini dikelola manual — update langsung di kode kalau ada workflow baru atau ada yang berubah fungsi.
+        </p>
+        <div className="divide-y divide-gray-100 rounded-xl border border-gray-200 bg-white">
+          {CONNECTED_SYSTEMS.map((sys) => (
+            <div key={sys.id} className="flex items-center justify-between gap-4 px-4 py-3">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-medium text-gray-900">{sys.name}</p>
+                <p className="truncate text-sm text-gray-500">{sys.description}</p>
+              </div>
+              <a
+                href={sys.n8nUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="shrink-0 text-sm text-gray-400 hover:text-gray-700"
+              >
+                Buka di n8n ↗
+              </a>
+            </div>
+          ))}
+        </div>
       </main>
     </div>
   );
