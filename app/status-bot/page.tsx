@@ -15,79 +15,113 @@ type SortDir = 'asc' | 'desc';
 interface ConnectedSystem {
   id: string;
   name: string;
+  category: string;
   description: string;
+  relations?: string[];
   n8nUrl: string;
 }
 
+// Urutan tampilan kategori -- tambah nama kategori baru di sini kalau ada
+// kategori baru ke depannya, urutan tetap terkontrol (bukan alfabetis acak).
+const CATEGORY_ORDER = ['Global', 'BOT Channel WA', 'Chatbot WA', 'Chatbot Meta (IG)'];
+
 // Daftar manual -- update di sini kalau ada workflow baru yang terhubung ke
-// Kirana Monitor. TODO: Patrik, tolong isi name & description masing-masing
-// (n8n editor perlu login, jadi ga bisa dibaca otomatis dari sini).
+// Kirana Monitor, atau ada workflow existing yang berubah fungsi.
 const CONNECTED_SYSTEMS: ConnectedSystem[] = [
   {
-    id: '1',
-    name: 'TODO: isi nama workflow',
-    description: 'TODO: isi fungsi singkat',
-    n8nUrl: 'https://n8n-crfkzibn5git.jkt3.sumopod.my.id/workflow/k7R1YsdYmxMvZkkJ',
-  },
-  {
-    id: '2',
-    name: 'TODO: isi nama workflow',
-    description: 'TODO: isi fungsi singkat',
-    n8nUrl: 'https://n8n-crfkzibn5git.jkt3.sumopod.my.id/workflow/MdoDzcH0D3r8XsWb',
-  },
-  {
-    id: '3',
-    name: 'TODO: isi nama workflow',
-    description: 'TODO: isi fungsi singkat',
-    n8nUrl: 'https://n8n-crfkzibn5git.jkt3.sumopod.my.id/workflow/xaLrH3EDMDq9kHO7',
-  },
-  {
-    id: '4',
-    name: 'TODO: isi nama workflow',
-    description: 'TODO: isi fungsi singkat',
+    id: 'error-notifier',
+    name: 'WF_ErrorNotifier',
+    category: 'Global',
+    description:
+      'Jaring pengaman global — otomatis terpicu kalau workflow lain gagal, kirim notif error (nama workflow, node gagal, pesan error, link eksekusi) ke WA Patrik.',
     n8nUrl: 'https://n8n-crfkzibn5git.jkt3.sumopod.my.id/workflow/UlL1qwZ3mhx07NDV',
   },
   {
-    id: '5',
-    name: 'TODO: isi nama workflow',
-    description: 'TODO: isi fungsi singkat',
-    n8nUrl: 'https://n8n-crfkzibn5git.jkt3.sumopod.my.id/workflow/oQ9G8xozbzZp64yE',
-  },
-  {
-    id: '6',
-    name: 'TODO: isi nama workflow',
-    description: 'TODO: isi fungsi singkat',
-    n8nUrl: 'https://n8n-crfkzibn5git.jkt3.sumopod.my.id/workflow/HrGbVvIA5RiDzHvq',
-  },
-  {
-    id: '7',
-    name: 'TODO: isi nama workflow',
-    description: 'TODO: isi fungsi singkat',
+    id: 'sync-sheet',
+    name: 'WF_Sync_Sheet_ke_Supabase',
+    category: 'BOT Channel WA',
+    description:
+      "Sinkronisasi bulanan (tgl 5, jam 5 pagi): tarik data dari Google Sheet 'LINK CAMPAIGN CHANNEL WA', bersihkan & upsert massal ke tabel campaign_links.",
     n8nUrl: 'https://n8n-crfkzibn5git.jkt3.sumopod.my.id/workflow/w1BS525iVEp6Ch3R',
   },
   {
-    id: '8',
-    name: 'TODO: isi nama workflow',
-    description: 'TODO: isi fungsi singkat',
+    id: 'broadcast-watcher',
+    name: 'WF_Broadcast_Watcher',
+    category: 'BOT Channel WA',
+    description:
+      'Penjadwal otomatis tiap 5 menit — cek verifikasi timeout & 8 slot jadwal per hari, memicu pemilihan link baru kalau waktunya tiba.',
+    relations: ['Memanggil: WF_Select_and_Verify, WF_Generate_and_Send'],
     n8nUrl: 'https://n8n-crfkzibn5git.jkt3.sumopod.my.id/workflow/Xg34nPNQ5a1exVML',
   },
   {
-    id: '9',
-    name: 'TODO: isi nama workflow',
-    description: 'TODO: isi fungsi singkat',
-    n8nUrl: 'https://n8n-crfkzibn5git.jkt3.sumopod.my.id/workflow/L27QQJxlaC2xwH1f',
-  },
-  {
-    id: '10',
-    name: 'TODO: isi nama workflow',
-    description: 'TODO: isi fungsi singkat',
+    id: 'select-verify',
+    name: 'WF_Select_and_Verify',
+    category: 'BOT Channel WA',
+    description:
+      'Algoritma pemilihan 10 link produk per slot (rotasi brand & kategori L1–L3 biar variatif), kirim ke WA untuk diverifikasi (balas OK/GANTI).',
+    relations: ['Dipanggil oleh: WF_Broadcast_Watcher, WF_Web_Command, WF_Command_Listener'],
     n8nUrl: 'https://n8n-crfkzibn5git.jkt3.sumopod.my.id/workflow/vzBgNkpxyUPErtlo',
   },
   {
-    id: '11',
-    name: 'TODO: isi nama workflow',
-    description: 'TODO: isi fungsi singkat',
+    id: 'web-command',
+    name: 'WF_Web_Command',
+    category: 'BOT Channel WA',
+    description:
+      'Endpoint kontrol broadcast dari halaman Channel WA di Kirana Monitor (action STOP/START/SEND_NOW/OK/GANTI, via shared secret).',
+    relations: ['Memanggil: WF_Select_and_Verify, WF_Generate_and_Send'],
+    n8nUrl: 'https://n8n-crfkzibn5git.jkt3.sumopod.my.id/workflow/HrGbVvIA5RiDzHvq',
+  },
+  {
+    id: 'command-listener',
+    name: 'WF_Command_Listener',
+    category: 'BOT Channel WA',
+    description:
+      'Versi WA dari kontrol broadcast (khusus nomor Patrik) — 6 keyword: OK, GANTI, SEND NOW, STOP, START, STATUS.',
+    relations: ['Memanggil: WF_Select_and_Verify, WF_Generate_and_Send'],
+    n8nUrl: 'https://n8n-crfkzibn5git.jkt3.sumopod.my.id/workflow/L27QQJxlaC2xwH1f',
+  },
+  {
+    id: 'generate-send',
+    name: 'WF_Generate_and_Send',
+    category: 'BOT Channel WA',
+    description:
+      'Setelah link di-ACC: generate teks broadcast via AI (Sumopod), kirim ke WA Channel, update last_sent_at & channel_broadcast_log.',
+    relations: ['Dipanggil oleh: WF_Broadcast_Watcher, WF_Web_Command, WF_Command_Listener'],
     n8nUrl: 'https://n8n-crfkzibn5git.jkt3.sumopod.my.id/workflow/w0GOG5laec87G84T',
+  },
+  {
+    id: 'commandbot-wa',
+    name: 'WF_CommandBot_WA_Unified',
+    category: 'Chatbot WA',
+    description:
+      'Otak utama bot WhatsApp untuk nomor 1052 & 7484 — deteksi spam, mesin stage percakapan, eskalasi & routing staff, simpan semua log/session.',
+    relations: ['Dikontrol oleh: WF_BotToggle_v2.0 (activate/deactivate via n8n API)'],
+    n8nUrl: 'https://n8n-crfkzibn5git.jkt3.sumopod.my.id/workflow/k7R1YsdYmxMvZkkJ',
+  },
+  {
+    id: 'staffreply-handler',
+    name: 'WF_StaffReply_Handler_Unified',
+    category: 'Chatbot WA',
+    description:
+      'Interface command WA untuk staff kelola eskalasi (ketik MENU, resolve tiket) tanpa perlu buka Kirana Monitor.',
+    n8nUrl: 'https://n8n-crfkzibn5git.jkt3.sumopod.my.id/workflow/MdoDzcH0D3r8XsWb',
+  },
+  {
+    id: 'bottoggle-v2',
+    name: 'WF_BotToggle_v2.0',
+    category: 'Chatbot WA',
+    description:
+      'Command BOT_ON/BOT_OFF/BOT_STATUS via WA dari nomor authorized — aktif/nonaktifkan bot lewat n8n API, catat ke bot_toggle_logs.',
+    relations: ['Mengontrol: WF_CommandBot_WA_Unified (via n8n API)'],
+    n8nUrl: 'https://n8n-crfkzibn5git.jkt3.sumopod.my.id/workflow/xaLrH3EDMDq9kHO7',
+  },
+  {
+    id: 'meta-bot-handler',
+    name: 'Meta Bot Handler (IG+FB) v8',
+    category: 'Chatbot Meta (IG)',
+    description:
+      'Bot Instagram DM & Facebook Messenger — versi Meta dari CommandBot, termasuk fitur follow-gate campaign di Reels (bagian deteksi komentar belum dibangun).',
+    n8nUrl: 'https://n8n-crfkzibn5git.jkt3.sumopod.my.id/workflow/oQ9G8xozbzZp64yE',
   },
 ];
 
@@ -298,28 +332,52 @@ function BotStatusContent() {
           </div>
         )}
 
-        {/* Sistem Terhubung -- daftar workflow n8n yang menopang Kirana Monitor */}
+        {/* Sistem Terhubung -- daftar workflow n8n yang menopang Kirana Monitor,
+            dikelompokkan per kategori. Baris "↳" menunjukkan relasi panggil-memanggil
+            antar workflow (khusus yang saling terhubung). */}
         <h2 className="mb-1 mt-10 text-base font-medium text-gray-900">Sistem Terhubung (n8n)</h2>
         <p className="mb-4 text-sm text-gray-500">
-          Daftar workflow n8n yang terhubung ke Kirana Monitor. Daftar ini dikelola manual — update langsung di kode kalau ada workflow baru atau ada yang berubah fungsi.
+          Daftar workflow n8n yang terhubung ke Kirana Monitor. Daftar ini dikelola manual — update langsung di kode kalau ada workflow baru, kategori baru, atau ada yang berubah fungsi.
         </p>
-        <div className="divide-y divide-gray-100 rounded-xl border border-gray-200 bg-white">
-          {CONNECTED_SYSTEMS.map((sys) => (
-            <div key={sys.id} className="flex items-center justify-between gap-4 px-4 py-3">
-              <div className="min-w-0">
-                <p className="truncate text-sm font-medium text-gray-900">{sys.name}</p>
-                <p className="truncate text-sm text-gray-500">{sys.description}</p>
+        <div className="space-y-6">
+          {CATEGORY_ORDER.map((category) => {
+            const items = CONNECTED_SYSTEMS.filter((s) => s.category === category);
+            if (items.length === 0) return null;
+            return (
+              <div key={category}>
+                <p className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+                  {category}
+                </p>
+                <div className="divide-y divide-gray-100 rounded-xl border border-gray-200 bg-white">
+                  {items.map((sys) => (
+                    <div key={sys.id} className="flex items-start justify-between gap-4 px-4 py-3">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-gray-900">{sys.name}</p>
+                        <p className="mt-0.5 text-sm text-gray-500">{sys.description}</p>
+                        {sys.relations && sys.relations.length > 0 && (
+                          <div className="mt-1.5 space-y-0.5">
+                            {sys.relations.map((r, i) => (
+                              <p key={i} className="text-xs text-gray-400">
+                                ↳ {r}
+                              </p>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <a
+                        href={sys.n8nUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="shrink-0 whitespace-nowrap text-sm text-gray-400 hover:text-gray-700"
+                      >
+                        Buka di n8n ↗
+                      </a>
+                    </div>
+                  ))}
+                </div>
               </div>
-              <a
-                href={sys.n8nUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="shrink-0 text-sm text-gray-400 hover:text-gray-700"
-              >
-                Buka di n8n ↗
-              </a>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </main>
     </div>
