@@ -37,6 +37,16 @@ function BindContent() {
           ))}
         </div>
 
+        {profile?.role === 'admin' && (
+          <button
+            onClick={() => router.push('/channel')}
+            className="mt-3 w-full rounded-xl border border-gray-200 bg-white p-4 text-left shadow-sm hover:border-gray-400"
+          >
+            <p className="font-medium text-gray-900">Channel WA</p>
+            <p className="text-sm text-gray-500">Bintang Agency | Link Cuan MCN</p>
+          </button>
+        )}
+
         <button
           onClick={() => signOut()}
           className="mt-6 w-full text-center text-sm text-gray-400 hover:text-gray-600"
