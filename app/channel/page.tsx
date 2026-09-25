@@ -151,6 +151,28 @@ function ChannelContent() {
     } finally {
       setActionLoading(null);
     }
+      async function clearHistory() {
+    if (!session) return;
+    if (!confirm('Hapus SEMUA history broadcast? Tindakan ini tidak bisa dibatalkan.')) return;
+    setClearing(true);
+    setActionError(null);
+    try {
+      const res = await fetch('/api/channel/clear-history', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        setActionError(json.error || 'Gagal menghapus history');
+      } else {
+        setLogs([]);
+      }
+    } catch (e) {
+      setActionError('Gagal menghubungi server: ' + (e as Error).message);
+    } finally {
+      setClearing(false);
+    }
+  }
   }
 
   function formatReactions(r: Record<string, number> | null) {
@@ -260,8 +282,19 @@ function ChannelContent() {
 
             <div className="grid grid-cols-3 gap-4">
               {/* ===== Bagian 3: Feed Histori Broadcast ===== */}
-              <div className="col-span-2">
-                <h2 className="mb-2 text-sm font-semibold text-gray-700">Histori Broadcast</h2>
+              <div className="col-span-2">                
+                <div className="mb-2 flex items-center justify-between">
+                  <h2 className="text-sm font-semibold text-gray-700">Histori Broadcast</h2>
+                  {logs.length > 0 && (
+                    <button
+                      onClick={clearHistory}
+                      disabled={clearing}
+                      className="text-xs text-red-500 hover:text-red-700 disabled:opacity-40"
+                    >
+                      {clearing ? 'Menghapus...' : '🗑️ Hapus History'}
+                    </button>
+                  )}
+                </div>
                 {logs.length === 0 ? (
                   <p className="text-sm text-gray-400">Belum ada broadcast tercatat.</p>
                 ) : (
