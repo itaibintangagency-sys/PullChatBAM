@@ -21,8 +21,11 @@ interface ConnectedSystem {
   n8nUrl: string;
 }
 
-// Urutan tampilan kategori -- tambah nama kategori baru di sini kalau ada
-// kategori baru ke depannya, urutan tetap terkontrol (bukan alfabetis acak).
+type SysSortKey = 'category' | 'name';
+
+// Urutan default kategori (dipakai saat sort by Kategori, dan sebagai
+// tie-break) -- tambah nama kategori baru di sini kalau ada kategori baru
+// ke depannya, urutan tetap terkontrol (bukan alfabetis acak).
 const CATEGORY_ORDER = ['Global', 'BOT Channel WA', 'Chatbot WA', 'Chatbot Meta (IG)'];
 
 // Daftar manual -- update di sini kalau ada workflow baru yang terhubung ke
@@ -134,6 +137,11 @@ function BotStatusContent() {
   const [sortKey, setSortKey] = useState<SortKey>('created_at');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
 
+  // Sort utk tabel Sistem Terhubung -- default kategori (ikut CATEGORY_ORDER),
+  // klik header lain (Workflow) buat sort bebas lintas kategori.
+  const [sysSortKey, setSysSortKey] = useState<SysSortKey>('category');
+  const [sysSortDir, setSysSortDir] = useState<SortDir>('asc');
+
   useEffect(() => {
     load();
 
@@ -172,6 +180,15 @@ function BotStatusContent() {
     }
   }
 
+  function toggleSysSort(key: SysSortKey) {
+    if (sysSortKey === key) {
+      setSysSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSysSortKey(key);
+      setSysSortDir('asc');
+    }
+  }
+
   const currentStatus = logs[0];
 
   const filtered = useMemo(() => {
@@ -191,6 +208,21 @@ function BotStatusContent() {
     if (perPage !== 'all') list = list.slice(0, perPage);
     return list;
   }, [logs, statusFilter, perPage, sortKey, sortDir]);
+
+  const sortedSystems = useMemo(() => {
+    const list = [...CONNECTED_SYSTEMS];
+    list.sort((a, b) => {
+      let cmp = 0;
+      if (sysSortKey === 'category') {
+        cmp = CATEGORY_ORDER.indexOf(a.category) - CATEGORY_ORDER.indexOf(b.category);
+        if (cmp === 0) cmp = a.name.localeCompare(b.name);
+      } else {
+        cmp = a.name.localeCompare(b.name);
+      }
+      return sysSortDir === 'asc' ? cmp : -cmp;
+    });
+    return list;
+  }, [sysSortKey, sysSortDir]);
 
   // Ringkasan cepat: berapa kali ON/OFF gagal dalam 24 jam terakhir -- sinyal kesehatan
   const last24hFailed = useMemo(() => {
@@ -214,6 +246,9 @@ function BotStatusContent() {
 
   const SortArrow = ({ col }: { col: SortKey }) =>
     sortKey === col ? <span className="ml-1 text-xs">{sortDir === 'asc' ? '↑' : '↓'}</span> : null;
+
+  const SysSortArrow = ({ col }: { col: SysSortKey }) =>
+    sysSortKey === col ? <span className="ml-1 text-xs">{sysSortDir === 'asc' ? '↑' : '↓'}</span> : null;
 
   return (
     <div className="pl-56">
@@ -332,52 +367,64 @@ function BotStatusContent() {
           </div>
         )}
 
-        {/* Sistem Terhubung -- daftar workflow n8n yang menopang Kirana Monitor,
-            dikelompokkan per kategori. Baris "↳" (italic) menunjukkan relasi
-            panggil-memanggil antar workflow (khusus yang saling terhubung). */}
+        {/* Sistem Terhubung -- tabel sortable, pola visual sama persis dgn
+            tabel log di atas. Baris "↳" (italic) di kolom Fungsi menunjukkan
+            relasi panggil-memanggil antar workflow (khusus yg saling terhubung). */}
         <h2 className="mb-1 mt-10 text-base font-semibold text-gray-900">Sistem Terhubung (n8n)</h2>
         <p className="mb-4 text-sm text-gray-500">
-          Daftar workflow n8n yang terhubung ke Kirana Monitor. Daftar ini dikelola manual — update langsung di kode kalau ada workflow baru, kategori baru, atau ada yang berubah fungsi.
+          Daftar workflow n8n yang terhubung ke Kirana Monitor. Dikelola manual — update langsung di kode kalau ada workflow baru, kategori baru, atau ada yang berubah fungsi.
         </p>
-        <div className="space-y-6">
-          {CATEGORY_ORDER.map((category) => {
-            const items = CONNECTED_SYSTEMS.filter((s) => s.category === category);
-            if (items.length === 0) return null;
-            return (
-              <div key={category}>
-                <p className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
-                  {category}
-                </p>
-                <div className="divide-y divide-gray-100 rounded-xl border border-gray-200 bg-white">
-                  {items.map((sys) => (
-                    <div key={sys.id} className="flex items-start justify-between gap-4 px-4 py-3">
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-gray-900">{sys.name}</p>
-                        <p className="mt-0.5 text-sm text-gray-500">{sys.description}</p>
-                        {sys.relations && sys.relations.length > 0 && (
-                          <div className="mt-1.5 space-y-0.5">
-                            {sys.relations.map((r, i) => (
-                              <p key={i} className="text-xs italic text-gray-400">
-                                ↳ {r}
-                              </p>
-                            ))}
-                          </div>
-                        )}
+        <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+          <table className="w-full text-sm">
+            <thead className="border-b border-gray-200 bg-gray-50">
+              <tr>
+                <th
+                  onClick={() => toggleSysSort('category')}
+                  className="cursor-pointer px-4 py-2 text-left font-medium text-gray-700"
+                >
+                  Kategori <SysSortArrow col="category" />
+                </th>
+                <th
+                  onClick={() => toggleSysSort('name')}
+                  className="cursor-pointer px-4 py-2 text-left font-medium text-gray-700"
+                >
+                  Workflow <SysSortArrow col="name" />
+                </th>
+                <th className="px-4 py-2 text-left font-medium text-gray-700">Fungsi</th>
+                <th className="px-4 py-2 text-left font-medium text-gray-700">Link</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {sortedSystems.map((sys) => (
+                <tr key={sys.id}>
+                  <td className="px-4 py-2 text-gray-500">{sys.category}</td>
+                  <td className="px-4 py-2 font-medium text-gray-900">{sys.name}</td>
+                  <td className="px-4 py-2 text-gray-500">
+                    {sys.description}
+                    {sys.relations && sys.relations.length > 0 && (
+                      <div className="mt-1 space-y-0.5">
+                        {sys.relations.map((r, i) => (
+                          <p key={i} className="text-xs italic text-gray-400">
+                            ↳ {r}
+                          </p>
+                        ))}
                       </div>
-                      <a
-                        href={sys.n8nUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="shrink-0 whitespace-nowrap text-sm font-medium text-gray-400 hover:text-gray-700"
-                      >
-                        Buka di n8n ↗
-                      </a>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            );
-          })}
+                    )}
+                  </td>
+                  <td className="px-4 py-2">
+                    <a
+                      href={sys.n8nUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="whitespace-nowrap text-sm font-medium text-gray-400 hover:text-gray-700"
+                    >
+                      Buka di n8n ↗
+                    </a>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </main>
     </div>
