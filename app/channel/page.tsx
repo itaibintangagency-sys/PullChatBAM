@@ -66,7 +66,7 @@ function ChannelContent() {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<CommandAction | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
-  const [clearing, setClearing] = useState(false);
+  const [resetting, setResetting] = useState(false);
 
   const loadAll = useCallback(async () => {
     const [controlRes, pendingRes, logsRes, brandRes] = await Promise.all([
@@ -153,26 +153,36 @@ function ChannelContent() {
     }
   }
 
-  async function clearHistory() {
+  async function resetAll() {
     if (!session) return;
-    if (!confirm('Hapus SEMUA history broadcast? Tindakan ini tidak bisa dibatalkan.')) return;
-    setClearing(true);
+    if (
+      !confirm(
+        'Reset TOTAL Channel WA?\n\n' +
+          '- Rotasi produk (last_sent_at & send_count) di-reset semua\n' +
+          '- Histori broadcast DIHAPUS\n' +
+          '- Histori verifikasi DIHAPUS\n' +
+          '- Status broadcast dikembalikan ke AKTIF\n\n' +
+          'Tindakan ini TIDAK BISA dibatalkan.'
+      )
+    )
+      return;
+    setResetting(true);
     setActionError(null);
     try {
-      const res = await fetch('/api/channel/clear-history', {
+      const res = await fetch('/api/channel/reset', {
         method: 'POST',
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
       const json = await res.json();
       if (!res.ok) {
-        setActionError(json.error || 'Gagal menghapus history');
+        setActionError(json.error || 'Gagal reset');
       } else {
-        setLogs([]);
+        loadAll();
       }
     } catch (e) {
       setActionError('Gagal menghubungi server: ' + (e as Error).message);
     } finally {
-      setClearing(false);
+      setResetting(false);
     }
   }
 
@@ -240,6 +250,13 @@ function ChannelContent() {
                 >
                   {actionLoading === 'SEND_NOW' ? 'Memproses...' : '🚀 SEND NOW'}
                 </button>
+                <button
+                  onClick={resetAll}
+                  disabled={resetting || actionLoading !== null}
+                  className="rounded-lg border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-40"
+                >
+                  {resetting ? 'Mereset...' : '🗑️ Reset History'}
+                </button>
               </div>
             </div>
 
@@ -284,18 +301,7 @@ function ChannelContent() {
             <div className="grid grid-cols-3 gap-4">
               {/* ===== Bagian 3: Feed Histori Broadcast ===== */}
               <div className="col-span-2">
-                <div className="mb-2 flex items-center justify-between">
-                  <h2 className="text-sm font-semibold text-gray-700">Histori Broadcast</h2>
-                  {logs.length > 0 && (
-                    <button
-                      onClick={clearHistory}
-                      disabled={clearing}
-                      className="text-xs text-red-500 hover:text-red-700 disabled:opacity-40"
-                    >
-                      {clearing ? 'Menghapus...' : '🗑️ Hapus History'}
-                    </button>
-                  )}
-                </div>
+                <h2 className="mb-2 text-sm font-semibold text-gray-700">Histori Broadcast</h2>
                 {logs.length === 0 ? (
                   <p className="text-sm text-gray-400">Belum ada broadcast tercatat.</p>
                 ) : (
