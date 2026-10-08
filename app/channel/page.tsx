@@ -64,6 +64,7 @@ function ChannelContent() {
   const [actionLoading, setActionLoading] = useState<CommandAction | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [resetting, setResetting] = useState(false);
+  const [skipBusy, setSkipBusy] = useState<string | null>(null);
 
   const loadAll = useCallback(async () => {
     const [controlRes, pendingRes, logsRes, brandRes] = await Promise.all([
@@ -147,6 +148,43 @@ function ChannelContent() {
       setActionError('Gagal menghubungi server: ' + (e as Error).message);
     } finally {
       setActionLoading(null);
+    }
+  }
+
+  // Next Brand (skip=true) / Batalkan (skip=false)
+  async function ubahSkipBrand(brand: { nama_toko: string; link_tersisa?: number }, skip: boolean) {
+    if (!session) return;
+    if (
+      skip &&
+      !confirm(
+        `Lewati brand "${brand.nama_toko}"?\n\n` +
+          `Sisa ${brand.link_tersisa ?? 0} link brand ini TIDAK akan dikirim sampai Anda batalkan.\n` +
+          'Slot berikutnya langsung memakai brand lain (komisi MCN tertinggi).'
+      )
+    )
+      return;
+    setSkipBusy(brand.nama_toko);
+    setActionError(null);
+    try {
+      const res = await fetch('/api/channel/next-brand', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ action: skip ? 'SKIP' : 'UNSKIP', nama_toko: brand.nama_toko }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        setActionError(json.error || 'Gagal mengubah status brand');
+        loadAll(); // tampilan mungkin usang -> segarkan
+      } else {
+        loadAll();
+      }
+    } catch (e) {
+      setActionError('Gagal menghubungi server: ' + (e as Error).message);
+    } finally {
+      setSkipBusy(null);
     }
   }
 
@@ -298,9 +336,9 @@ function ChannelContent() {
               </div>
             )}
 
-            <div className="grid grid-cols-5 gap-4">
-              {/* ===== Bagian 3: Feed Histori Broadcast ===== */}
-              <div className="col-span-2">
+            <div className="space-y-6">
+              {/* ===== Bagian 3: Feed Histori Broadcast (atas) ===== */}
+              <div>
                 <h2 className="mb-2 text-sm font-semibold text-gray-700">Histori Broadcast</h2>
                 {logs.length === 0 ? (
                   <div>
@@ -313,7 +351,7 @@ function ChannelContent() {
                     )}
                   </div>
                 ) : (
-                  <div className="space-y-3">
+                  <div className="max-h-[520px] space-y-3 overflow-y-auto pr-1">
                     {logs.map((log) => (
                       <div key={log.id} className="rounded-xl border border-gray-200 bg-white p-4">
                         <div className="mb-2 flex items-center justify-between">
@@ -356,10 +394,16 @@ function ChannelContent() {
                 )}
               </div>
 
-              {/* ===== Bagian 4: Antrean Brand ===== */}
-              <div className="col-span-3">
+              {/* ===== Bagian 4: Antrean Brand (di bawah histori) ===== */}
+              <div>
                 <h2 className="mb-2 text-sm font-semibold text-gray-700">Antrean Brand</h2>
-                <BrandQueueTable rows={brandList} kirimanPerHari={KIRIMAN_PER_HARI} />
+                <BrandQueueTable
+                  rows={brandList}
+                  kirimanPerHari={KIRIMAN_PER_HARI}
+                  busyBrand={skipBusy}
+                  onNextBrand={(b) => ubahSkipBrand(b, true)}
+                  onBatalkan={(nama) => ubahSkipBrand({ nama_toko: nama }, false)}
+                />
               </div>
             </div>
           </>
