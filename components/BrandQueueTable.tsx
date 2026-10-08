@@ -12,6 +12,8 @@ export interface BrandQueueItem {
   total_link: number;
   terakhir_dikirim: string | null;
   brand_aktif: boolean;
+  link_ditahan?: number; // link brand yang ditahan karena dilewati
+  dilewati?: boolean; // brand sedang dilewati (Next Brand)
 }
 
 type SortKey = 'urutan' | 'nama_toko' | 'link_tersisa' | 'komisi' | 'terkirim' | 'status';
@@ -53,15 +55,22 @@ function buildPageNumbers(current: number, total: number): (number | '…')[] {
 interface Props {
   rows: BrandQueueItem[];
   kirimanPerHari?: number;
+  // Tombol "Next Brand" hanya muncul di baris brand yang sedang berjalan
+  onNextBrand?: (brand: BrandQueueItem) => void;
+  // Tombol "Batalkan" di daftar brand yang dilewati
+  onBatalkan?: (namaToko: string) => void;
+  // Nama brand yang sedang diproses (tombol dinonaktifkan)
+  busyBrand?: string | null;
 }
 
-export function BrandQueueTable({ rows, kirimanPerHari = 5 }: Props) {
+export function BrandQueueTable({ rows, kirimanPerHari = 5, onNextBrand, onBatalkan, busyBrand = null }: Props) {
   const [sortKey, setSortKey] = useState<SortKey>('urutan');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
   const [page, setPage] = useState(1);
 
-  const tersisa = useMemo(() => rows.filter((b) => b.link_tersisa > 0), [rows]);
-  const brandHabis = rows.length - tersisa.length;
+  const tersisa = useMemo(() => rows.filter((b) => b.link_tersisa > 0 && !b.dilewati), [rows]);
+  const dilewati = useMemo(() => rows.filter((b) => b.dilewati), [rows]);
+  const brandHabis = rows.filter((b) => !b.dilewati && b.link_tersisa === 0).length;
   const totalLink = useMemo(() => tersisa.reduce((sum, b) => sum + b.link_tersisa, 0), [tersisa]);
 
   // Brand "Berikutnya" = urutan 1 kalau belum ada brand berjalan, selain itu urutan 2
@@ -139,21 +148,20 @@ export function BrandQueueTable({ rows, kirimanPerHari = 5 }: Props) {
     );
   }
 
-  if (tersisa.length === 0) {
-    return (
-      <div className="rounded-xl border border-gray-200 bg-white p-4">
-        <p className="text-xs text-gray-400">Semua link sudah terkirim atau kadaluarsa.</p>
-      </div>
-    );
-  }
-
   return (
     <div className="rounded-xl border border-gray-200 bg-white">
       <p className="px-3 pt-3 pb-2 text-[11px] text-gray-500">
         {tersisa.length} brand · {totalLink} link belum terkirim
         {brandHabis > 0 ? ` · ${brandHabis} brand habis` : ''}
+        {dilewati.length > 0 ? ` · ${dilewati.length} brand dilewati` : ''}
       </p>
 
+      {tersisa.length === 0 ? (
+        <p className="border-t border-gray-100 px-3 py-4 text-xs text-gray-400">
+          Semua link sudah terkirim, kadaluarsa, atau brand-nya sedang dilewati.
+        </p>
+      ) : (
+        <>
       <div className="overflow-x-auto">
         <table className="w-full text-xs">
           <thead>
@@ -202,8 +210,21 @@ export function BrandQueueTable({ rows, kirimanPerHari = 5 }: Props) {
                   </td>
                   <td className="px-2 py-1.5">
                     {b.brand_aktif && (
-                      <span className="rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-medium text-white">
-                        Berjalan
+                      <span className="flex flex-wrap items-center gap-1.5">
+                        <span className="rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-medium text-white">
+                          Berjalan
+                        </span>
+                        {onNextBrand && (
+                          <button
+                            type="button"
+                            onClick={() => onNextBrand(b)}
+                            disabled={busyBrand !== null}
+                            title="Lewati sisa link brand ini dan lanjut ke brand berikutnya"
+                            className="rounded-md border border-emerald-600 bg-white px-2 py-0.5 text-[10px] font-medium text-emerald-700 hover:bg-emerald-50 disabled:opacity-40"
+                          >
+                            {busyBrand === b.nama_toko ? 'Memproses...' : 'Next Brand →'}
+                          </button>
+                        )}
                       </span>
                     )}
                     {berikutnya && (
@@ -270,6 +291,37 @@ export function BrandQueueTable({ rows, kirimanPerHari = 5 }: Props) {
         Hijau = brand sedang dikuras · Biru = giliran berikutnya · angka oranye = sisa ≤ 3 link. Komisi MCN dihitung
         dari link yang masih tersisa. Perkiraan hari memakai {kirimanPerHari} kiriman/hari.
       </p>
+        </>
+      )}
+
+      {dilewati.length > 0 && (
+        <div className="border-t border-gray-200 bg-gray-50 px-3 py-3">
+          <p className="mb-2 text-[11px] font-medium text-gray-600">Brand dilewati ({dilewati.length})</p>
+          <ul className="space-y-1.5">
+            {dilewati.map((b) => (
+              <li key={b.nama_toko} className="flex items-center justify-between gap-2 text-xs">
+                <span className="min-w-0 truncate text-gray-700" title={b.nama_toko}>
+                  {b.nama_toko}
+                  <span className="ml-2 text-gray-400">{b.link_ditahan ?? 0} link ditahan</span>
+                </span>
+                {onBatalkan && (
+                  <button
+                    type="button"
+                    onClick={() => onBatalkan(b.nama_toko)}
+                    disabled={busyBrand !== null}
+                    className="shrink-0 rounded-md border border-gray-300 bg-white px-2 py-0.5 text-[10px] font-medium text-gray-700 hover:bg-gray-100 disabled:opacity-40"
+                  >
+                    {busyBrand === b.nama_toko ? 'Memproses...' : 'Batalkan'}
+                  </button>
+                )}
+              </li>
+            ))}
+          </ul>
+          <p className="mt-2 text-[10px] text-gray-400">
+            Link brand ini tidak dikirim sampai dibatalkan. Link baru dari brand ini (mis. setelah Sync) ikut dilewati.
+          </p>
+        </div>
+      )}
     </div>
   );
 }
