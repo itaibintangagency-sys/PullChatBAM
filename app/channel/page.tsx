@@ -46,14 +46,22 @@ interface BroadcastLogItem {
   reactions: Record<string, number> | null;
 }
 
-interface BrandStalenessItem {
+// Antrean brand -- dibaca dari view `brand_queue` di Supabase
+interface BrandQueueItem {
+  urutan: number | null;
   nama_toko: string;
-  last_sent_at: string | null;
-  total_produk: number;
-  belum_pernah_terkirim: number;
+  link_tersisa: number;
+  komisi_mcn_terbaik: number | string | null;
+  sudah_terkirim: number;
+  total_link: number;
+  terakhir_dikirim: string | null;
+  brand_aktif: boolean;
 }
 
 type CommandAction = 'STOP' | 'START' | 'SEND_NOW' | 'OK' | 'GANTI';
+
+const KIRIMAN_PER_HARI = 5; // jumlah slot per hari (Watcher: 08, 11, 14, 17, 20)
+const BRAND_DEFAULT_TAMPIL = 15;
 
 function ChannelContent() {
   const { nomor, session } = useAuth();
@@ -62,7 +70,8 @@ function ChannelContent() {
   const [pending, setPending] = useState<VerificationItem | null>(null);
   const [pendingProducts, setPendingProducts] = useState<CampaignLinkMini[]>([]);
   const [logs, setLogs] = useState<BroadcastLogItem[]>([]);
-  const [brandList, setBrandList] = useState<BrandStalenessItem[]>([]);
+  const [brandList, setBrandList] = useState<BrandQueueItem[]>([]);
+  const [showAllBrands, setShowAllBrands] = useState(false);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<CommandAction | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -84,15 +93,15 @@ function ChannelContent() {
         .order('broadcast_at', { ascending: false })
         .limit(30),
       supabase
-        .from('brand_staleness')
+        .from('brand_queue')
         .select('*')
-        .order('last_sent_at', { ascending: true, nullsFirst: true })
-        .limit(15),
+        .order('urutan', { ascending: true, nullsFirst: false })
+        .limit(1000),
     ]);
 
     if (controlRes.data) setControl(controlRes.data as ChannelControl);
     setLogs((logsRes.data as BroadcastLogItem[]) || []);
-    setBrandList((brandRes.data as BrandStalenessItem[]) || []);
+    setBrandList((brandRes.data as BrandQueueItem[]) || []);
 
     if (pendingRes.data) {
       const verif = pendingRes.data as VerificationItem;
@@ -185,6 +194,12 @@ function ChannelContent() {
       setResetting(false);
     }
   }
+
+  // Nilai turunan utk panel Antrean Brand
+  const brandTersisa = brandList.filter((b) => b.link_tersisa > 0);
+  const brandHabis = brandList.length - brandTersisa.length;
+  const totalLinkTersisa = brandTersisa.reduce((sum, b) => sum + b.link_tersisa, 0);
+  const brandTampil = showAllBrands ? brandTersisa : brandTersisa.slice(0, BRAND_DEFAULT_TAMPIL);
 
   function formatReactions(r: Record<string, number> | null) {
     if (!r) return '';
@@ -312,11 +327,23 @@ function ChannelContent() {
                           <span className="text-xs font-medium text-gray-500">
                             {new Date(log.broadcast_at).toLocaleString('id-ID')}
                           </span>
-                          {log.sent_via === 'TIMEOUT_AUTO_SENT' && (
-                            <span className="rounded bg-amber-100 px-2 py-0.5 text-[10px] text-amber-700">
-                              ⚠️ auto-kirim (timeout)
-                            </span>
-                          )}
+                          <span className="flex items-center gap-1.5">
+                            {log.sent_via === 'TIMEOUT_AUTO_SENT' && (
+                              <span className="rounded bg-amber-100 px-2 py-0.5 text-[10px] text-amber-700">
+                                ⚠️ auto-kirim (timeout)
+                              </span>
+                            )}
+                            {log.sent_via === 'SEND_NOW' && (
+                              <span className="rounded bg-blue-100 px-2 py-0.5 text-[10px] text-blue-700">
+                                SEND NOW
+                              </span>
+                            )}
+                            {log.sent_via === 'SCHEDULE' && (
+                              <span className="rounded bg-gray-100 px-2 py-0.5 text-[10px] text-gray-600">
+                                Terjadwal
+                              </span>
+                            )}
+                          </span>
                         </div>
                         <p className="mb-2 text-xs text-gray-600">
                           Brand: {log.brand_list?.join(', ')} · {log.link_ids?.length || 0} link
@@ -336,23 +363,59 @@ function ChannelContent() {
                 )}
               </div>
 
-              {/* ===== Bagian 4: Rotasi Brand ===== */}
+              {/* ===== Bagian 4: Antrean Brand ===== */}
               <div>
-                <h2 className="mb-2 text-sm font-semibold text-gray-700">Rotasi Brand</h2>
+                <h2 className="mb-2 text-sm font-semibold text-gray-700">Antrean Brand</h2>
                 <div className="rounded-xl border border-gray-200 bg-white p-3">
-                  <p className="mb-2 text-[11px] text-gray-400">Paling lama belum di-BC duluan</p>
-                  <div className="space-y-1.5">
-                    {brandList.map((b) => (
-                      <div key={b.nama_toko} className="flex items-center justify-between text-xs">
-                        <span className="truncate text-gray-700" title={b.nama_toko}>
-                          {b.nama_toko}
-                        </span>
-                        <span className="ml-2 shrink-0 text-gray-400">
-                          {b.last_sent_at ? new Date(b.last_sent_at).toLocaleDateString('id-ID') : 'belum pernah'}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
+                  <p className="mb-2 text-[11px] text-gray-400">
+                    {brandTersisa.length} brand · {totalLinkTersisa} link belum terkirim
+                    {brandHabis > 0 ? ` · ${brandHabis} brand habis` : ''}
+                  </p>
+                  {brandTersisa.length === 0 ? (
+                    <p className="text-xs text-gray-400">Semua link sudah terkirim atau kadaluarsa.</p>
+                  ) : (
+                    <div className={`space-y-1 ${showAllBrands ? 'max-h-[480px] overflow-y-auto pr-1' : ''}`}>
+                      {brandTampil.map((b) => (
+                        <div
+                          key={b.nama_toko}
+                          className={`flex items-center justify-between gap-2 rounded-md px-1.5 py-1 text-xs ${
+                            b.brand_aktif ? 'bg-green-50' : ''
+                          }`}
+                          title={`Komisi MCN terbaik: ${
+                            b.komisi_mcn_terbaik !== null ? Number(b.komisi_mcn_terbaik) : '-'
+                          }% · sudah terkirim ${b.sudah_terkirim} dari ${b.total_link}`}
+                        >
+                          <span className="flex min-w-0 items-center gap-1.5">
+                            <span className="w-5 shrink-0 text-right text-gray-400">{b.urutan}</span>
+                            <span className="truncate text-gray-700">{b.nama_toko}</span>
+                            {b.brand_aktif && (
+                              <span className="shrink-0 rounded bg-green-100 px-1.5 py-0.5 text-[9px] font-medium text-green-700">
+                                berjalan
+                              </span>
+                            )}
+                          </span>
+                          <span className="shrink-0 text-gray-500">
+                            {b.link_tersisa} link
+                            <span className="ml-1 text-gray-400">
+                              · ~{Math.max(1, Math.ceil(b.link_tersisa / KIRIMAN_PER_HARI))} hr
+                            </span>
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {brandTersisa.length > BRAND_DEFAULT_TAMPIL && (
+                    <button
+                      onClick={() => setShowAllBrands((v) => !v)}
+                      className="mt-2 w-full rounded-lg border border-gray-200 py-1.5 text-xs text-gray-600 hover:bg-gray-50"
+                    >
+                      {showAllBrands ? 'Ciutkan' : `Lihat semua (${brandTersisa.length} brand)`}
+                    </button>
+                  )}
+                  <p className="mt-2 text-[10px] text-gray-400">
+                    Urutan = giliran tayang berikutnya (komisi MCN tertinggi). Hari = perkiraan lama brand habis
+                    pada {KIRIMAN_PER_HARI} kiriman/hari.
+                  </p>
                 </div>
               </div>
             </div>
