@@ -114,6 +114,9 @@ export interface BlacklistEntry {
   detected_at: string;
   reason: string | null;
   original_message: string | null;
+  status?: 'PENDING' | 'CONFIRMED' | 'CLEARED'; // kolom baru; baris lama dianggap CONFIRMED
+  reviewed_by?: string | null;
+  reviewed_at?: string | null;
 }
  
 export interface DormantEntry {
