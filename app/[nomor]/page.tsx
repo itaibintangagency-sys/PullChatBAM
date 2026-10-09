@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, use } from 'react';
+import { useEffect, useRef, useState, use } from 'react';
 import Link from 'next/link';
 import { RequireNomor } from '@/components/RouteGuard';
 import { NavHeader } from '@/components/NavHeader';
@@ -8,6 +8,8 @@ import { useAuth } from '@/lib/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { Nomor } from '@/lib/types';
 import { SkeletonCard } from '@/components/Skeleton';
+import { RefreshBar } from '@/components/RefreshBar';
+import { usePageRefresh } from '@/lib/usePageRefresh';
 
 interface Counts {
   escalationsOpen: number;
@@ -68,13 +70,19 @@ function DashboardContent({ nomor }: { nomor: Nomor }) {
   const [priority, setPriority] = useState<PriorityBreakdown>({ HIGH: 0, MEDIUM: 0, LOW: 0, other: 0 });
   const [dormantSrc, setDormantSrc] = useState<DormantBreakdown>({ HANDOFF: 0, BUNTU_9X: 0, other: 0 });
 
+  const loadedFor = useRef<string | null>(null);
+
+  const { refreshNow, barProps } = usePageRefresh(load, { storageKey: 'dashboard', runOnMount: false });
+
   useEffect(() => {
-    load();
+    void refreshNow();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nomor, myAlias]);
 
-  async function load() {
-    setLoading(true);
+  async function load(): Promise<boolean> {
+    // Skeleton hanya saat pertama kali / ganti bot / ganti alias -- bukan tiap auto-refresh
+    const key = `${nomor}|${myAlias}`;
+    if (loadedFor.current !== key) setLoading(true);
 
     const [escOpenCount, dormantCount, blacklistCount, phonebookCount, escOpenRows, dormantRows] = await Promise.all([
       supabase.from('escalations').select('*', { count: 'exact', head: true }).eq('bot_source', nomor).eq('status', 'OPEN'),
@@ -84,6 +92,12 @@ function DashboardContent({ nomor }: { nomor: Nomor }) {
       supabase.from('escalations').select('assigned_to, priority').eq('bot_source', nomor).eq('status', 'OPEN'),
       supabase.from('dormant_tracking').select('source').eq('bot_source', nomor).eq('status', 'PENDING'),
     ]);
+
+    // Query gagal -> jangan timpa angka lama dengan 0 (auto-refresh tidak boleh "mengosongkan" dashboard)
+    if ([escOpenCount, dormantCount, blacklistCount, phonebookCount, escOpenRows, dormantRows].some((r) => r.error)) {
+      setLoading(false);
+      return false;
+    }
 
     setCounts({
       escalationsOpen: escOpenCount.count || 0,
@@ -129,15 +143,22 @@ function DashboardContent({ nomor }: { nomor: Nomor }) {
     });
     setDormantSrc(dorm);
 
+    loadedFor.current = key;
     setLoading(false);
+    return true;
   }
 
   return (
     <div className="pl-56">
       <NavHeader nomor={nomor} />
       <main className="mx-auto max-w-4xl px-4 py-8">
-        <h1 className="mb-1 text-lg font-medium text-gray-900">Dashboard</h1>
-        <p className="mb-6 text-sm text-gray-500">Ringkasan cepat bot {nomor}.</p>
+        <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h1 className="mb-1 text-lg font-medium text-gray-900">Dashboard</h1>
+            <p className="text-sm text-gray-500">Ringkasan cepat bot {nomor}.</p>
+          </div>
+          <RefreshBar {...barProps} />
+        </div>
 
         {!isAdmin && !myAlias && (
           <div className="mb-4 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-700">
