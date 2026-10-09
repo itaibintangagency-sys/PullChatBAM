@@ -87,7 +87,7 @@ function DashboardContent({ nomor }: { nomor: Nomor }) {
     const [escOpenCount, dormantCount, blacklistCount, phonebookCount, escOpenRows, dormantRows] = await Promise.all([
       supabase.from('escalations').select('*', { count: 'exact', head: true }).eq('bot_source', nomor).eq('status', 'OPEN'),
       supabase.from('dormant_tracking').select('*', { count: 'exact', head: true }).eq('bot_source', nomor).eq('status', 'PENDING'),
-      supabase.from('blacklist').select('*', { count: 'exact', head: true }).eq('bot_source', nomor),
+      supabase.from('blacklist').select('*', { count: 'exact', head: true }).eq('bot_source', nomor).eq('status', 'CONFIRMED'),
       supabase.from('phonebook').select('*', { count: 'exact', head: true }).eq('bot_source', nomor),
       supabase.from('escalations').select('assigned_to, priority').eq('bot_source', nomor).eq('status', 'OPEN'),
       supabase.from('dormant_tracking').select('source').eq('bot_source', nomor).eq('status', 'PENDING'),
