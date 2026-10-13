@@ -19,13 +19,14 @@ function statusOf(i: BlacklistEntry): 'PENDING' | 'CONFIRMED' | 'CLEARED' {
 }
 
 function BlacklistContent({ nomor }: { nomor: Nomor }) {
-  const { profile } = useAuth();
+  const { profile, session } = useAuth();
   const reviewer = profile?.display_name || null;
 
   const [items, setItems] = useState<BlacklistEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
 
   // Form tambah manual
   const [nomorWa, setNomorWa] = useState('');
@@ -57,9 +58,28 @@ function BlacklistContent({ nomor }: { nomor: Nomor }) {
     setLoading(false);
   }
 
+  // Beri tahu pool ALERT (lewat n8n) bahwa ada nomor yang di-blacklist MANUAL. Gagal kirim TIDAK membatalkan penambahan.
+  async function notifyBlacklist(nomorWaBaru: string, alasan: string) {
+    try {
+      const res = await fetch('/api/blacklist/notify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token ?? ''}` },
+        body: JSON.stringify({ nomor_wa: nomorWaBaru, bot_source: nomor, reason: alasan }),
+      });
+      setNotice(
+        res.ok
+          ? 'Nomor ditambahkan. Notifikasi WA dikirim ke pool ALERT.'
+          : 'Nomor ditambahkan, tetapi notifikasi WA gagal dikirim.'
+      );
+    } catch {
+      setNotice('Nomor ditambahkan, tetapi notifikasi WA gagal dikirim.');
+    }
+  }
+
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
     setError('');
+    setNotice('');
 
     const normalized = normalizeNomor(nomorWa);
     if (!normalized || !reason.trim()) {
@@ -92,6 +112,7 @@ function BlacklistContent({ nomor }: { nomor: Nomor }) {
         setError('Gagal menambah nomor.');
         return;
       }
+      void notifyBlacklist(normalized, reason.trim());
       setNomorWa('');
       setReason('');
       load();
@@ -112,6 +133,7 @@ function BlacklistContent({ nomor }: { nomor: Nomor }) {
       );
       return;
     }
+    void notifyBlacklist(normalized, reason.trim());
     setNomorWa('');
     setReason('');
     load();
@@ -260,6 +282,12 @@ function BlacklistContent({ nomor }: { nomor: Nomor }) {
             Tambah ke blacklist
           </button>
         </form>
+
+        {notice && (
+          <p className={`mb-4 rounded-lg px-3 py-2 text-sm ${/gagal/.test(notice) ? 'bg-amber-50 text-amber-700' : 'bg-green-50 text-green-700'}`}>
+            {notice}
+          </p>
+        )}
 
         <input
           type="text"
