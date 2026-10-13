@@ -190,7 +190,21 @@ export interface PhonebookListEntry {
   category: string | null;
   last_msg_at: string | null;
 }
- 
+
+export interface L0Config {
+  // ...field yang sudah ada...
+  pool: string | null;
+  urutan: number | null;
+  escalation_alias: string | null;
+}
+
+export interface RoutingPool {
+  pool: string;
+  label: string;
+  mode: 'ALL' | 'ROUND_ROBIN' | string;
+  active: boolean;
+}
+
 export interface GroupedCustomer {
   nomor_wa: string;
   nama: string | null;
