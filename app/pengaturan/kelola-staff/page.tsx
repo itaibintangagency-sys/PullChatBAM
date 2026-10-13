@@ -12,21 +12,22 @@ const ROLE_LABELS: Record<string, string> = {
   staff: 'Staff',
 };
 
-// Nilai persis yang muncul di kolom escalations.assigned_to sekarang
-// (dicek langsung dari data, bukan tebakan -- kalau nanti ada nama
-// staff baru yang dipakai di l0_config untuk eskalasi, tambahkan di sini juga)
-const ESCALATION_ALIAS_OPTIONS = [
-  'SAGETA',
-  'STAF_COMUNITY',
-  'INDAH',
-  'YUL',
-  'YOAN',
-  'RINTAN',
-  'RINTAN2',
-  'RIZKI',
-  'SALMA',
-  'CS',
-];
+// Daftar alias eskalasi dibaca dari tabel l0_config (kolom escalation_alias), yang diatur di
+// Staff & Routing. Alias = kode tetap yang tersimpan di escalations.assigned_to dan dipakai
+// mencocokkan tiket dengan akun. Tidak ada lagi daftar tetap di kode ini.
+type AliasRow = {
+  escalation_alias: string;
+  display_name: string;
+  pool: string | null;
+  active: boolean | null;
+};
+
+type AliasOption = {
+  alias: string;
+  nama: string;
+  pool: string | null;
+  active: boolean;
+};
 
 function roleBadgeClass(role: string) {
   return role === 'admin' ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600';
@@ -35,6 +36,7 @@ function roleBadgeClass(role: string) {
 function KelolaStaffContent() {
   const { nomor, profile: myProfile } = useAuth();
   const [profiles, setProfiles] = useState<StaffProfile[]>([]);
+  const [aliasOptions, setAliasOptions] = useState<AliasOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [error, setError] = useState('');
@@ -54,8 +56,30 @@ function KelolaStaffContent() {
 
   async function load() {
     setLoading(true);
-    const { data } = await supabase.from('staff_profiles').select('*').order('display_name');
-    setProfiles((data as StaffProfile[]) || []);
+    const [profRes, aliasRes] = await Promise.all([
+      supabase.from('staff_profiles').select('*').order('display_name'),
+      supabase
+        .from('l0_config')
+        .select('escalation_alias, display_name, pool, active')
+        .not('escalation_alias', 'is', null)
+        .order('pool', { ascending: true, nullsFirst: false })
+        .order('display_name'),
+    ]);
+
+    setProfiles((profRes.data as StaffProfile[]) || []);
+
+    if (aliasRes.error) {
+      setError('Gagal memuat daftar alias dari Staff & Routing. Muat ulang halaman.');
+    }
+    const rows = (aliasRes.data as AliasRow[] | null) ?? [];
+    setAliasOptions(
+      rows.map((r) => ({
+        alias: r.escalation_alias,
+        nama: r.display_name,
+        pool: r.pool,
+        active: r.active !== false,
+      }))
+    );
     setLoading(false);
   }
 
@@ -85,6 +109,41 @@ function KelolaStaffContent() {
       return;
     }
     load();
+  }
+
+  // Opsi alias dari DB, dikelompokkan: yang menerima eskalasi (punya pool) dan yang tidak.
+  // Kalau alias akun saat ini tidak ada di daftar (data lama), tetap ditampilkan supaya tidak terlihat kosong.
+  function renderAliasOptions(current?: string | null) {
+    const known = new Set(aliasOptions.map((o) => o.alias));
+    const menerima = aliasOptions.filter((o) => o.pool);
+    const tanpaPool = aliasOptions.filter((o) => !o.pool);
+    const label = (o: AliasOption) => `${o.alias} — ${o.nama}${o.active ? '' : ' (nonaktif)'}`;
+
+    return (
+      <>
+        {menerima.length > 0 && (
+          <optgroup label="Menerima eskalasi">
+            {menerima.map((o) => (
+              <option key={o.alias} value={o.alias}>
+                {label(o)}
+              </option>
+            ))}
+          </optgroup>
+        )}
+        {tanpaPool.length > 0 && (
+          <optgroup label="Tanpa pool (tidak menerima eskalasi)">
+            {tanpaPool.map((o) => (
+              <option key={o.alias} value={o.alias}>
+                {label(o)}
+              </option>
+            ))}
+          </optgroup>
+        )}
+        {current && !known.has(current) && (
+          <option value={current}>{current} (tidak ada di Staff &amp; Routing)</option>
+        )}
+      </>
+    );
   }
 
   async function handleAddStaff(e: React.FormEvent) {
@@ -180,14 +239,13 @@ function KelolaStaffContent() {
               className="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-600 outline-none focus:border-gray-500 sm:col-span-2"
             >
               <option value="">Alias eskalasi (opsional)</option>
-              {ESCALATION_ALIAS_OPTIONS.map((opt) => (
-                <option key={opt} value={opt}>{opt}</option>
-              ))}
+              {renderAliasOptions(newEscalationAlias)}
             </select>
           </div>
           <p className="mt-2 text-xs text-gray-400">
             Akun baru selalu dibuat dengan role &quot;Staff&quot; — ubah jadi admin lewat daftar di bawah kalau perlu.
             Alias eskalasi dipakai untuk cocokkan tiket di tabel escalations (kolom assigned_to) dengan akun ini.
+            Daftar alias diambil dari Staff &amp; Routing.
           </p>
           {addError && <p className="mt-2 text-sm text-red-600">{addError}</p>}
           {addSuccess && <p className="mt-2 text-sm text-green-600">{addSuccess}</p>}
@@ -232,9 +290,7 @@ function KelolaStaffContent() {
                         className="rounded border border-gray-200 bg-gray-50 px-2 py-1 text-xs text-gray-700 outline-none focus:border-gray-400 disabled:opacity-40"
                       >
                         <option value="">— belum diisi —</option>
-                        {ESCALATION_ALIAS_OPTIONS.map((opt) => (
-                          <option key={opt} value={opt}>{opt}</option>
-                        ))}
+                        {renderAliasOptions(p.escalation_alias)}
                       </select>
                     </div>
                   </div>
