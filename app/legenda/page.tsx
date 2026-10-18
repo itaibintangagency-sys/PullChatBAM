@@ -46,6 +46,12 @@ const MENU_DOCS: MenuDoc[] = [
     ],
   },
   {
+    nama: 'Tabel Eskalasi',
+    untukSiapa: 'Semua orang',
+    fungsi:
+      'Semua tiket eskalasi dari semua bot dalam satu tabel. Bisa diurutkan dengan klik judul kolom (waktu masuk, umur, penerima, status, dll), difilter menurut status, penerima, jenis, bot, rentang tanggal, dan umur tiket, serta dicari lewat nama, nomor, atau ID tiket. Kartu di atas tabel menunjukkan jumlah tiket terbuka per penerima, klik untuk memfilter. Kolom bisa dipilih, dan hasilnya bisa diekspor ke CSV. Untuk menandai tiket selesai, buka halaman Eskalasi bot yang bersangkutan.',
+  },
+  {
     nama: 'Blacklist',
     untukSiapa: 'Semua orang',
     fungsi:
