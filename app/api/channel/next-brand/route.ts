@@ -6,7 +6,7 @@ const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 // POST { action: 'SKIP' | 'UNSKIP', nama_toko: string }
-// SKIP   = "Next Brand": lewati brand yang SEDANG BERJALAN sampai dibatalkan
+// SKIP   = "Next Brand": lewati brand yang terakhir terkirim atau yang berikutnya tayang, sampai dibatalkan
 // UNSKIP = batalkan lewati
 export async function POST(request: NextRequest) {
   if (!SERVICE_ROLE_KEY) {
@@ -54,24 +54,31 @@ export async function POST(request: NextRequest) {
 
   const adminClient = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
-  // "Next Brand" hanya boleh untuk brand yang SEDANG BERJALAN, yaitu brand dari link
-  // yang paling terakhir terkirim. Cegah salah-skip kalau tampilan sudah usang
-  // (mis. slot baru saja jalan dan brand-nya berganti).
+  // SKIP hanya boleh untuk dua brand: (1) brand yang PALING TERAKHIR terkirim, dan (2) brand yang
+  // berstatus BERIKUTNYA di antrean (view channel_queue). Mencegah salah-skip kalau tampilan sudah usang
+  // (mis. slot baru saja jalan dan giliran berganti).
   if (action === 'SKIP') {
-    const { data: terakhir, error: terakhirError } = await adminClient
-      .from('campaign_links')
-      .select('nama_toko')
-      .not('last_sent_at', 'is', null)
-      .order('last_sent_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
+    const [terakhirRes, berikutnyaRes] = await Promise.all([
+      adminClient
+        .from('campaign_links')
+        .select('nama_toko')
+        .not('last_sent_at', 'is', null)
+        .order('last_sent_at', { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      adminClient.from('channel_queue').select('nama_toko').eq('status', 'BERIKUTNYA').limit(1).maybeSingle(),
+    ]);
 
-    if (terakhirError) {
-      return NextResponse.json({ error: 'Gagal membaca brand aktif: ' + terakhirError.message }, { status: 500 });
-    }
-    if (!terakhir || terakhir.nama_toko !== namaToko) {
+    if (terakhirRes.error || berikutnyaRes.error) {
       return NextResponse.json(
-        { error: 'Brand yang sedang berjalan sudah berubah. Muat ulang halaman lalu coba lagi.' },
+        { error: 'Gagal membaca antrean brand: ' + (terakhirRes.error?.message || berikutnyaRes.error?.message) },
+        { status: 500 }
+      );
+    }
+    const boleh = [terakhirRes.data?.nama_toko, berikutnyaRes.data?.nama_toko].filter(Boolean);
+    if (!boleh.includes(namaToko)) {
+      return NextResponse.json(
+        { error: 'Giliran brand sudah berubah. Muat ulang halaman lalu coba lagi.' },
         { status: 409 }
       );
     }

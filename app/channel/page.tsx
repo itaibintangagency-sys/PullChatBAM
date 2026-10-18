@@ -51,8 +51,6 @@ interface BroadcastLogItem {
 
 type CommandAction = 'STOP' | 'START' | 'SEND_NOW' | 'OK' | 'GANTI';
 
-const KIRIMAN_PER_HARI = 5; // jumlah slot per hari (Watcher: 08, 11, 14, 17, 20)
-
 function ChannelContent() {
   const { nomor, session } = useAuth();
 
@@ -89,7 +87,7 @@ function ChannelContent() {
         .order('broadcast_at', { ascending: false })
         .limit(30),
       supabase
-        .from('brand_queue')
+        .from('channel_queue')
         .select('*')
         .order('urutan', { ascending: true, nullsFirst: false })
         .limit(1000),
@@ -159,15 +157,15 @@ function ChannelContent() {
   }
 
   // Next Brand (skip=true) / Batalkan (skip=false)
-  async function ubahSkipBrand(brand: { nama_toko: string; link_tersisa?: number }, skip: boolean) {
+  async function ubahSkipBrand(brand: { nama_toko: string; link_layak?: number }, skip: boolean) {
     if (!session) return;
-    const sisa = brand.link_tersisa ?? 0;
+    const sisa = brand.link_layak ?? 0;
     if (
       skip &&
       !confirm(
         `Lewati brand "${brand.nama_toko}"?\n\n` +
           (sisa > 0
-            ? `Sisa ${sisa} link brand ini TIDAK akan dikirim sampai Anda batalkan.\n`
+            ? `Sisa ${sisa} link layak kirim brand ini TIDAK akan dikirim sampai Anda batalkan.\n`
             : 'Produk brand ini tidak akan dipilih lagi sampai Anda batalkan.\n') +
           'Slot berikutnya memakai brand lain.'
       )
@@ -232,7 +230,7 @@ function ChannelContent() {
   }
 
   // Total link yang tercatat terkirim -- dipakai utk mendeteksi histori yang tidak tercatat
-  const totalTerkirim = brandList.reduce((sum, b) => sum + b.sudah_terkirim, 0);
+  const totalTerkirim = brandList.reduce((sum, b) => sum + b.link_pernah_terkirim, 0);
 
   function formatReactions(r: Record<string, number> | null) {
     if (!r) return '';
@@ -354,7 +352,7 @@ function ChannelContent() {
                   <p className="truncate text-sm font-medium text-gray-900" title={ulang.brandTerakhir}>
                     {ulang.brandTerakhir}
                     <span className="ml-2 text-xs font-normal text-gray-500">
-                      {ulang.brandBeruntun}× berturut-turut · sisa {brandTerakhirRow?.link_tersisa ?? 0} link belum terkirim
+                      {ulang.brandBeruntun}× berturut-turut · {brandTerakhirRow?.link_layak ?? 0} link layak kirim
                     </span>
                   </p>
                 </div>
@@ -369,7 +367,7 @@ function ChannelContent() {
                 ) : (
                   <button
                     onClick={() =>
-                      ubahSkipBrand({ nama_toko: ulang.brandTerakhir as string, link_tersisa: brandTerakhirRow?.link_tersisa ?? 0 }, true)
+                      ubahSkipBrand({ nama_toko: ulang.brandTerakhir as string, link_layak: brandTerakhirRow?.link_layak ?? 0 }, true)
                     }
                     disabled={skipBusy !== null}
                     title="Lewati brand ini supaya slot berikutnya memakai brand lain"
@@ -482,9 +480,8 @@ function ChannelContent() {
                 <h2 className="mb-2 text-sm font-semibold text-gray-700">Antrean Brand</h2>
                 <BrandQueueTable
                   rows={brandList}
-                  kirimanPerHari={KIRIMAN_PER_HARI}
                   busyBrand={skipBusy}
-                  onNextBrand={(b) => ubahSkipBrand(b, true)}
+                  onLewati={(b) => ubahSkipBrand({ nama_toko: b.nama_toko, link_layak: b.link_layak }, true)}
                   onBatalkan={(nama) => ubahSkipBrand({ nama_toko: nama }, false)}
                 />
               </div>
