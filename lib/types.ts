@@ -98,13 +98,19 @@ export interface Escalation {
   data_notes: string | null;
   customer_issue: string | null;
   notes: string | null;
-  status: 'OPEN' | 'RESOLVED' | string;
+  status: 'OPEN' | 'RESOLVE' | 'PENDING' | string; // di DB selesai = 'RESOLVE'; tiket IG = 'PENDING'
   staff_contacted_at: string | null;
   resolution: string | null;
   resolved_at: string | null;
   resolution_time: string | null;
   locked_by: string | null;
   locked_at: string | null;
+  // kolom lain yang ada di tabel (opsional)
+previous_assigned?: string | null;
+reassigned_at?: string | null;
+sla_met?: boolean | null;
+sla_notified?: boolean | null;
+source_session?: string | null;
 }
 
 export interface BlacklistEntry {
