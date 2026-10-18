@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import { RequireAdmin } from '@/components/RouteGuard';
 import { NavHeader } from '@/components/NavHeader';
 import { useAuth } from '@/lib/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { BrandQueueTable } from '@/components/BrandQueueTable';
 import type { BrandQueueItem } from '@/components/BrandQueueTable';
+import { AMBANG_BRAND_BERUNTUN, analisaPengulangan } from '@/lib/channelGuard';
 
 // ============================================================
 // Tipe data -- khusus halaman ini (belum ditambah ke lib/types.ts
@@ -65,6 +66,12 @@ function ChannelContent() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [resetting, setResetting] = useState(false);
   const [skipBusy, setSkipBusy] = useState<string | null>(null);
+
+  // Deteksi siaran yang berulang (brand sama berturut-turut / produk yang sama muncul lagi)
+  const ulang = useMemo(() => analisaPengulangan(logs), [logs]);
+  const brandTerakhirRow = brandList.find((b) => b.nama_toko === ulang.brandTerakhir);
+  const brandTerakhirDilewati = brandTerakhirRow?.dilewati === true;
+  const autoGuard = control?.is_active === false && (control?.updated_by ?? '').startsWith('AUTO_GUARD');
 
   const loadAll = useCallback(async () => {
     const [controlRes, pendingRes, logsRes, brandRes] = await Promise.all([
@@ -154,12 +161,15 @@ function ChannelContent() {
   // Next Brand (skip=true) / Batalkan (skip=false)
   async function ubahSkipBrand(brand: { nama_toko: string; link_tersisa?: number }, skip: boolean) {
     if (!session) return;
+    const sisa = brand.link_tersisa ?? 0;
     if (
       skip &&
       !confirm(
         `Lewati brand "${brand.nama_toko}"?\n\n` +
-          `Sisa ${brand.link_tersisa ?? 0} link brand ini TIDAK akan dikirim sampai Anda batalkan.\n` +
-          'Slot berikutnya langsung memakai brand lain (komisi MCN tertinggi).'
+          (sisa > 0
+            ? `Sisa ${sisa} link brand ini TIDAK akan dikirim sampai Anda batalkan.\n`
+            : 'Produk brand ini tidak akan dipilih lagi sampai Anda batalkan.\n') +
+          'Slot berikutnya memakai brand lain.'
       )
     )
       return;
@@ -297,6 +307,79 @@ function ChannelContent() {
                 </button>
               </div>
             </div>
+
+            {/* ===== Pengaman: dihentikan otomatis / pesan berulang ===== */}
+            {autoGuard && (
+              <div className="mb-4 rounded-2xl border border-red-300 bg-red-50 p-4" role="alert">
+                <p className="text-sm font-semibold text-red-800">⛔ Broadcast dihentikan otomatis oleh pengaman</p>
+                <p className="mt-1 text-xs text-red-700">{(control?.updated_by ?? '').replace('AUTO_GUARD: ', '')}</p>
+                <p className="mt-2 text-xs text-red-700">
+                  Periksa produk/brand yang terulang (lewati brand-nya bila perlu), lalu tekan START.
+                </p>
+              </div>
+            )}
+
+            {ulang.perluPeringatan && !autoGuard && (
+              <div className="mb-4 rounded-2xl border border-amber-300 bg-amber-50 p-4" role="alert">
+                <p className="text-sm font-semibold text-amber-800">⚠️ Pesan yang sama berulang</p>
+                <ul className="mt-1 list-disc space-y-0.5 pl-5 text-xs text-amber-800">
+                  {ulang.brandBeruntun >= AMBANG_BRAND_BERUNTUN && (
+                    <li>
+                      Brand <span className="font-semibold">{ulang.brandTerakhir}</span> tampil {ulang.brandBeruntun}× berturut-turut.
+                    </li>
+                  )}
+                  {ulang.produkUlang && (
+                    <li>
+                      Produk ID <span className="font-mono">{ulang.produkUlang.id}</span> terkirim {ulang.produkUlang.kali}× dalam{' '}
+                      {ulang.jendela} siaran terakhir.
+                    </li>
+                  )}
+                </ul>
+                <div className="mt-3">
+                  <button
+                    onClick={() => runCommand('STOP')}
+                    disabled={!control?.is_active || actionLoading !== null}
+                    className="rounded-lg border border-red-300 bg-white px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50 disabled:opacity-40"
+                  >
+                    {actionLoading === 'STOP' ? '...' : 'STOP broadcast'}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {ulang.brandTerakhir && (
+              <div className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3">
+                <div className="min-w-0">
+                  <p className="text-xs text-gray-400">Brand terakhir terkirim</p>
+                  <p className="truncate text-sm font-medium text-gray-900" title={ulang.brandTerakhir}>
+                    {ulang.brandTerakhir}
+                    <span className="ml-2 text-xs font-normal text-gray-500">
+                      {ulang.brandBeruntun}× berturut-turut · sisa {brandTerakhirRow?.link_tersisa ?? 0} link belum terkirim
+                    </span>
+                  </p>
+                </div>
+                {brandTerakhirDilewati ? (
+                  <button
+                    onClick={() => ubahSkipBrand({ nama_toko: ulang.brandTerakhir as string }, false)}
+                    disabled={skipBusy !== null}
+                    className="shrink-0 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40"
+                  >
+                    {skipBusy === ulang.brandTerakhir ? 'Memproses...' : 'Batalkan lewati'}
+                  </button>
+                ) : (
+                  <button
+                    onClick={() =>
+                      ubahSkipBrand({ nama_toko: ulang.brandTerakhir as string, link_tersisa: brandTerakhirRow?.link_tersisa ?? 0 }, true)
+                    }
+                    disabled={skipBusy !== null}
+                    title="Lewati brand ini supaya slot berikutnya memakai brand lain"
+                    className="shrink-0 rounded-lg border border-emerald-600 bg-white px-3 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-50 disabled:opacity-40"
+                  >
+                    {skipBusy === ulang.brandTerakhir ? 'Memproses...' : 'Lewati brand ini →'}
+                  </button>
+                )}
+              </div>
+            )}
 
             {/* ===== Bagian 2: Verifikasi Pending ===== */}
             {pending && (
