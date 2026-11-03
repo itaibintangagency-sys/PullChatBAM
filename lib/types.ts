@@ -5,6 +5,13 @@ export const NOMOR_LABELS: Record<Nomor, string> = {
   '1052': 'Nomor 1052 (089526861052)',
 };
 
+export type MetaChannel = 'ig' | 'fb';
+
+export const META_CHANNELS: Record<MetaChannel, { label: string; session: string; botSource: string }> = {
+  ig: { label: 'Instagram', session: 'Meta Bot IG', botSource: 'META_IG' },
+  fb: { label: 'Facebook', session: 'Meta Bot FB', botSource: 'META_FB' },
+};
+
 export interface ChatLog {
   id: string;
   timestamp: string;
