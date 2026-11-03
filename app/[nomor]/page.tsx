@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { RequireNomor } from '@/components/RouteGuard';
 import { NavHeader } from '@/components/NavHeader';
 import { useAuth } from '@/lib/AuthContext';
+import { ResolveAllPanel } from '@/components/ResolveAllPanel';
 import { supabase } from '@/lib/supabase';
 import { Nomor } from '@/lib/types';
 import { SkeletonCard } from '@/components/Skeleton';
@@ -299,6 +300,8 @@ function DashboardContent({ nomor }: { nomor: Nomor }) {
                 )}
               </div>
             )}
+
+            {isAdmin && <ResolveAllPanel nomor={nomor} onChanged={() => void load()} />}
 
             {/* 2 kolom breakdown -- tetap tampil buat semua role, ini
                 gambaran umum sistem, bukan data personal per-staff */}

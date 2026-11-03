@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo, use } from 'react';
 import { RequireNomor } from '@/components/RouteGuard';
 import { NavHeader } from '@/components/NavHeader';
 import { useAuth } from '@/lib/AuthContext';
+import { ResolveAllPanel } from '@/components/ResolveAllPanel';
 import { supabase } from '@/lib/supabase';
 import { Nomor, Escalation } from '@/lib/types';
 import { SkeletonRow } from '@/components/Skeleton';
@@ -207,6 +208,8 @@ function EscalationsContent({ nomor }: { nomor: Nomor }) {
             Kelola Staff supaya tiket kamu bisa terfilter otomatis di sini.
           </div>
         )}
+
+        <ResolveAllPanel nomor={nomor} onChanged={load} />
 
         {/* Controls */}
         <div className="mb-4 flex flex-wrap items-center gap-2">

@@ -226,3 +226,21 @@ export interface GroupedCustomer {
   stage: string;
   last_msg_at: string | null;
 }
+
+export interface ResolveRequest {
+  id: string;
+  bot_source: string;
+  requested_by_alias: string;
+  requested_by_nomor: string | null;
+  requested_via: 'WA' | 'WEB';
+  ticket_ids: string[];
+  ticket_count: number;
+  resolution_text: string | null;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'EXPIRED';
+  requested_at: string;
+  expires_at: string;
+  decided_by_nomor: string | null;
+  decided_at: string | null;
+  decision_note: string | null;
+  resolved_count: number | null;
+}
