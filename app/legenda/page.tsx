@@ -70,9 +70,10 @@ const MENU_DOCS: MenuDoc[] = [
       'Gabungan status bot + riwayat eskalasi + riwayat dormant buat 1 nomor WA, dalam 1 halaman ringkas. Murni buat dilihat, tidak ada tombol ubah data di sini.',
   },
   {
-    nama: 'Review harian',
+    nama: 'Feedback customer',
     untukSiapa: 'Semua orang',
-    fungsi: 'Isi penilaian harian soal kinerja bot & operasional (skala 1-5 + catatan).',
+    fungsi:
+      'Penilaian (1-5) dan komentar yang dikirim customer lewat WhatsApp setelah tiket ditangani. Ada rata-rata per staff, tren mingguan, dan daftar rating rendah untuk ditindaklanjuti.',
   },
   {
     nama: 'Nomor internal',

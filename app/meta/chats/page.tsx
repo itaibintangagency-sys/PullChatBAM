@@ -26,25 +26,6 @@ function MetaChatListContent() {
 
   const { session: sessionLabel, botSource } = META_CHANNELS[channel];
 
-  useEffect(() => {
-    setLoading(true);
-    loadData();
-
-    const sub = supabase
-      .channel(`chat_logs_meta_${channel}`)
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'chat_logs' },
-        () => loadData()
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(sub);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [channel]);
-
   async function loadData() {
     const [chatRes, bookRes] = await Promise.all([
       supabase
@@ -88,6 +69,26 @@ function MetaChatListContent() {
     setLoading(false);
   }
 
+  useEffect(() => {
+    // Memuat data awal dari Supabase -- pola yang sama dengan halaman Chat log WA
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void loadData();
+
+    const sub = supabase
+      .channel(`chat_logs_meta_${channel}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'chat_logs' },
+        () => void loadData()
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(sub);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [channel]);
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return rows;
@@ -104,7 +105,11 @@ function MetaChatListContent() {
           {(Object.keys(META_CHANNELS) as MetaChannel[]).map((c) => (
             <button
               key={c}
-              onClick={() => setChannel(c)}
+              onClick={() => {
+                if (c === channel) return;
+                setLoading(true);
+                setChannel(c);
+              }}
               className={`rounded-lg px-3 py-1.5 text-sm font-medium ${
                 channel === c ? 'bg-gray-900 text-white' : 'border border-gray-300 text-gray-600 hover:bg-gray-100'
               }`}

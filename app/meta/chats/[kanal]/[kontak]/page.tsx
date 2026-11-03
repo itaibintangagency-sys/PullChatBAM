@@ -16,8 +16,33 @@ function MetaThreadContent({ kanal, kontak }: { kanal: MetaChannel; kontak: stri
   const bottomRef = useRef<HTMLDivElement>(null);
   const { session: sessionLabel, botSource, label } = META_CHANNELS[kanal];
 
+  async function load() {
+    const [chatRes, bookRes] = await Promise.all([
+      supabase
+        .from('chat_logs')
+        .select('*')
+        .eq('session', sessionLabel)
+        .eq('nomor_wa', kontak)
+        .order('timestamp', { ascending: true }),
+      supabase
+        .from('phonebook')
+        .select('nama, platform_username')
+        .eq('bot_source', botSource)
+        .eq('nomor_wa', kontak)
+        .limit(1),
+    ]);
+
+    setLogs((chatRes.data as ChatLog[]) || []);
+    const book = bookRes.data?.[0];
+    setUsername(book?.nama || book?.platform_username || null);
+    setLoading(false);
+    setTimeout(() => bottomRef.current?.scrollIntoView(), 100);
+  }
+
   useEffect(() => {
-    load();
+    // Memuat data awal dari Supabase -- pola yang sama dengan halaman Chat log WA
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void load();
 
     const sub = supabase
       .channel(`meta_thread_${kontak}`)
@@ -41,29 +66,6 @@ function MetaThreadContent({ kanal, kontak }: { kanal: MetaChannel; kontak: stri
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [kontak]);
-
-  async function load() {
-    const [chatRes, bookRes] = await Promise.all([
-      supabase
-        .from('chat_logs')
-        .select('*')
-        .eq('session', sessionLabel)
-        .eq('nomor_wa', kontak)
-        .order('timestamp', { ascending: true }),
-      supabase
-        .from('phonebook')
-        .select('nama, platform_username')
-        .eq('bot_source', botSource)
-        .eq('nomor_wa', kontak)
-        .limit(1),
-    ]);
-
-    setLogs((chatRes.data as ChatLog[]) || []);
-    const book = bookRes.data?.[0];
-    setUsername(book?.nama || book?.platform_username || null);
-    setLoading(false);
-    setTimeout(() => bottomRef.current?.scrollIntoView(), 100);
-  }
 
   function exportCsv() {
     const header = 'Timestamp,Sender,Message_Type,Message_Text,Media_URL\n';
