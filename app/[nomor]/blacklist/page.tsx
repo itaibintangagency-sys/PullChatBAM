@@ -76,6 +76,24 @@ function BlacklistContent({ nomor }: { nomor: Nomor }) {
     }
   }
 
+  // Nomor yang baru dinyatakan BUKAN spam disapa bot (sambutan Kirana, lewat n8n). Gagal kirim TIDAK membatalkan keputusan.
+  async function sendClearedWelcome(nomorCleared: string) {
+    try {
+      const res = await fetch('/api/blacklist/cleared', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token ?? ''}` },
+        body: JSON.stringify({ nomor_wa: nomorCleared, bot_source: nomor }),
+      });
+      setNotice(
+        res.ok
+          ? 'Dinyatakan bukan spam. Sambutan Kirana dikirim ke nomor itu.'
+          : 'Dinyatakan bukan spam, tetapi sambutan WA gagal dikirim.'
+      );
+    } catch {
+      setNotice('Dinyatakan bukan spam, tetapi sambutan WA gagal dikirim.');
+    }
+  }
+
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
     setError('');
@@ -180,6 +198,9 @@ function BlacklistContent({ nomor }: { nomor: Nomor }) {
     }
     if (!data || data.length === 0) {
       setError('Kandidat ini sudah ditinjau orang lain. Daftar disegarkan.');
+    } else if (decision === 'CLEARED') {
+      setNotice('');
+      void sendClearedWelcome(item.nomor_wa);
     }
     load();
   }
