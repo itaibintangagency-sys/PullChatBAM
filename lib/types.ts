@@ -65,7 +65,9 @@ export interface BotToggleLog {
   action: 'ON' | 'OFF';
   triggered_by: string | null;
   status: 'success' | 'failed';
-  api_response: string | null;
+  api_response?: string | null;
+  workflow_id: string | null;
+  workflow_name: string | null;
   created_at: string;
 }
 
