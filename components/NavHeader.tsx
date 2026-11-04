@@ -27,10 +27,11 @@ export function NavHeader({ nomor }: { nomor: Nomor }) {
       items: [
         { href: `/${nomor}`, label: 'Dashboard' },
         { href: `/${nomor}/chats`, label: 'Chat log' },
+        { href: '/meta/chats', label: 'Chat log IG/FB' },
         { href: `/${nomor}/escalations`, label: 'Eskalasi' },
         { href: '/eskalasi', label: 'Tabel Eskalasi' },
         { href: `/${nomor}/dormant`, label: 'Dormant' },
-        { href: `/${nomor}/review`, label: 'Review harian' },
+        { href: `/${nomor}/feedback`, label: 'Feedback customer' },
       ],
     },
     {

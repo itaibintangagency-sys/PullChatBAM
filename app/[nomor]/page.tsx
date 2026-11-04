@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { RequireNomor } from '@/components/RouteGuard';
 import { NavHeader } from '@/components/NavHeader';
 import { useAuth } from '@/lib/AuthContext';
+import { ResolveAllPanel } from '@/components/ResolveAllPanel';
 import { supabase } from '@/lib/supabase';
 import { Nomor } from '@/lib/types';
 import { SkeletonCard } from '@/components/Skeleton';
@@ -12,7 +13,9 @@ import { RefreshBar } from '@/components/RefreshBar';
 import { usePageRefresh } from '@/lib/usePageRefresh';
 
 interface Counts {
+  escalationsTotal: number;
   escalationsOpen: number;
+  escalationsResolved: number;
   dormantPending: number;
   blacklistTotal: number;
   phonebookTotal: number;
@@ -20,7 +23,34 @@ interface Counts {
 
 interface StaffLoad {
   name: string;
-  count: number;
+  open: number;
+  resolved: number;
+}
+
+interface EscalationRow {
+  assigned_to: string | null;
+  priority: string | null;
+  status: string | null;
+}
+
+const FETCH_PAGE = 1000; // batas baris per permintaan di API Supabase
+
+// Ambil semua tiket per 1000 baris -- tanpa ini hasil terpotong diam-diam di 1000 baris
+async function fetchAllEscalations(nomor: Nomor): Promise<EscalationRow[] | null> {
+  const out: EscalationRow[] = [];
+  for (let from = 0; ; from += FETCH_PAGE) {
+    const { data, error } = await supabase
+      .from('escalations')
+      .select('assigned_to, priority, status')
+      .eq('bot_source', nomor)
+      .order('id')
+      .range(from, from + FETCH_PAGE - 1);
+    if (error) return null;
+    const rows = (data as EscalationRow[] | null) ?? [];
+    out.push(...rows);
+    if (rows.length < FETCH_PAGE) break;
+  }
+  return out;
 }
 
 interface PriorityBreakdown {
@@ -60,12 +90,14 @@ function DashboardContent({ nomor }: { nomor: Nomor }) {
 
   const [loading, setLoading] = useState(true);
   const [counts, setCounts] = useState<Counts>({
+    escalationsTotal: 0,
     escalationsOpen: 0,
+    escalationsResolved: 0,
     dormantPending: 0,
     blacklistTotal: 0,
     phonebookTotal: 0,
   });
-  const [myOpenCount, setMyOpenCount] = useState(0);
+  const [myCounts, setMyCounts] = useState({ total: 0, open: 0, resolved: 0 });
   const [staffLoad, setStaffLoad] = useState<StaffLoad[]>([]);
   const [priority, setPriority] = useState<PriorityBreakdown>({ HIGH: 0, MEDIUM: 0, LOW: 0, other: 0 });
   const [dormantSrc, setDormantSrc] = useState<DormantBreakdown>({ HANDOFF: 0, BUNTU_9X: 0, other: 0 });
@@ -84,56 +116,71 @@ function DashboardContent({ nomor }: { nomor: Nomor }) {
     const key = `${nomor}|${myAlias}`;
     if (loadedFor.current !== key) setLoading(true);
 
-    const [escOpenCount, dormantCount, blacklistCount, phonebookCount, escOpenRows, dormantRows] = await Promise.all([
-      supabase.from('escalations').select('*', { count: 'exact', head: true }).eq('bot_source', nomor).eq('status', 'OPEN'),
+    const [escRows, dormantCount, blacklistCount, phonebookCount, dormantRows] = await Promise.all([
+      fetchAllEscalations(nomor),
       supabase.from('dormant_tracking').select('*', { count: 'exact', head: true }).eq('bot_source', nomor).eq('status', 'PENDING'),
       supabase.from('blacklist').select('*', { count: 'exact', head: true }).eq('bot_source', nomor).eq('status', 'CONFIRMED'),
       supabase.from('phonebook').select('*', { count: 'exact', head: true }).eq('bot_source', nomor),
-      supabase.from('escalations').select('assigned_to, priority').eq('bot_source', nomor).eq('status', 'OPEN'),
       supabase.from('dormant_tracking').select('source').eq('bot_source', nomor).eq('status', 'PENDING'),
     ]);
 
     // Query gagal -> jangan timpa angka lama dengan 0 (auto-refresh tidak boleh "mengosongkan" dashboard)
-    if ([escOpenCount, dormantCount, blacklistCount, phonebookCount, escOpenRows, dormantRows].some((r) => r.error)) {
+    if (!escRows || [dormantCount, blacklistCount, phonebookCount, dormantRows].some((r) => r.error)) {
       setLoading(false);
       return false;
     }
 
-    setCounts({
-      escalationsOpen: escOpenCount.count || 0,
-      dormantPending: dormantCount.count || 0,
-      blacklistTotal: blacklistCount.count || 0,
-      phonebookTotal: phonebookCount.count || 0,
-    });
-
-    // Beban kerja per staff -- dihitung di sisi client dari baris OPEN
-    const loadMap: Record<string, number> = {};
+    // Total, terbuka, dan selesai dihitung dari satu daftar tiket yang sama -- angkanya pasti saling cocok
+    const loadMap: Record<string, StaffLoad> = {};
     const prio: PriorityBreakdown = { HIGH: 0, MEDIUM: 0, LOW: 0, other: 0 };
-    let myCount = 0;
-    (escOpenRows.data || []).forEach((r: { assigned_to: string | null; priority: string | null }) => {
-      const staff = r.assigned_to || 'Belum ditugaskan';
-      loadMap[staff] = (loadMap[staff] || 0) + 1;
-      const isMine = isAssignedToAlias(r.assigned_to, myAlias);
-      if (isMine) myCount++;
+    let open = 0;
+    let resolved = 0;
+    const mine = { total: 0, open: 0, resolved: 0 };
+    escRows.forEach((r) => {
+      const isResolved = r.status === 'RESOLVE';
+      const isOpen = r.status === 'OPEN';
+      if (isResolved) resolved++;
+      if (isOpen) open++;
 
-      // Admin lihat breakdown prioritas GLOBAL (semua tiket).
+      const staff = r.assigned_to || 'Belum ditugaskan';
+      const load = (loadMap[staff] ||= { name: staff, open: 0, resolved: 0 });
+      if (isResolved) load.resolved++;
+      if (isOpen) load.open++;
+
+      const isMine = isAssignedToAlias(r.assigned_to, myAlias);
+      if (isMine) {
+        mine.total++;
+        if (isResolved) mine.resolved++;
+        if (isOpen) mine.open++;
+      }
+
+      // Admin lihat breakdown prioritas GLOBAL (semua tiket terbuka).
       // Staff lihat breakdown prioritas cuma dari tiket MILIKNYA sendiri --
       // biar konsisten sama kartu "Tiket kamu terbuka" di atas, bukan
       // angka perusahaan yang tidak nyambung ke miliknya.
-      const countThis = isAdmin || isMine;
-      if (countThis) {
+      if (isOpen && (isAdmin || isMine)) {
         const p = r.priority;
         if (p === 'HIGH' || p === 'MEDIUM' || p === 'LOW') prio[p]++;
         else prio.other++;
       }
     });
+
+    setCounts({
+      escalationsTotal: escRows.length,
+      escalationsOpen: open,
+      escalationsResolved: resolved,
+      dormantPending: dormantCount.count || 0,
+      blacklistTotal: blacklistCount.count || 0,
+      phonebookTotal: phonebookCount.count || 0,
+    });
+    // Urut dari yang paling banyak belum selesai; yang sama-sama 0 diurut dari total terbanyak
     setStaffLoad(
-      Object.entries(loadMap)
-        .map(([name, count]) => ({ name, count }))
-        .sort((a, b) => b.count - a.count)
+      Object.values(loadMap)
+        .filter((s) => s.open + s.resolved > 0)
+        .sort((a, b) => b.open - a.open || b.open + b.resolved - (a.open + a.resolved))
     );
     setPriority(prio);
-    setMyOpenCount(myCount);
+    setMyCounts(mine);
 
     const dorm: DormantBreakdown = { HANDOFF: 0, BUNTU_9X: 0, other: 0 };
     (dormantRows.data || []).forEach((r: { source: string | null }) => {
@@ -179,12 +226,24 @@ function DashboardContent({ nomor }: { nomor: Nomor }) {
         ) : (
           <div className="animate-in fade-in space-y-6 duration-300">
             {/* Kartu utama */}
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              <CountCard
+                href={`/${nomor}/escalations`}
+                label={isAdmin ? 'Total eskalasi' : 'Total tiket kamu'}
+                value={isAdmin ? counts.escalationsTotal : myCounts.total}
+                tone="border-indigo-200 bg-indigo-50 text-indigo-800"
+              />
               <CountCard
                 href={`/${nomor}/escalations`}
                 label={isAdmin ? 'Eskalasi terbuka' : 'Tiket kamu terbuka'}
-                value={isAdmin ? counts.escalationsOpen : myOpenCount}
+                value={isAdmin ? counts.escalationsOpen : myCounts.open}
                 tone="border-red-200 bg-red-50 text-red-800"
+              />
+              <CountCard
+                href={`/${nomor}/escalations`}
+                label={isAdmin ? 'Sudah resolve' : 'Tiket kamu sudah resolve'}
+                value={isAdmin ? counts.escalationsResolved : myCounts.resolved}
+                tone="border-green-200 bg-green-50 text-green-800"
               />
               <CountCard
                 href={`/${nomor}/dormant`}
@@ -210,27 +269,39 @@ function DashboardContent({ nomor }: { nomor: Nomor }) {
                 lihat perbandingan beban kerja kolega lain */}
             {isAdmin && (
               <div>
-                <p className="mb-2 text-sm font-medium text-gray-900">Beban kerja staff (eskalasi terbuka)</p>
+                <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-sm font-medium text-gray-900">Beban kerja staff</p>
+                  <div className="flex items-center gap-3 text-xs text-gray-500">
+                    <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-gray-900" />Belum resolve</span>
+                    <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-green-500" />Sudah resolve</span>
+                  </div>
+                </div>
                 {staffLoad.length === 0 ? (
-                  <p className="text-sm text-gray-400">Tidak ada eskalasi terbuka saat ini.</p>
+                  <p className="text-sm text-gray-400">Belum ada eskalasi.</p>
                 ) : (
-                  <div className="space-y-1 rounded-xl border border-gray-200 bg-white p-3">
-                    {staffLoad.map((s) => (
-                      <div key={s.name} className="flex items-center gap-3">
-                        <span className="w-32 shrink-0 truncate text-sm text-gray-700">{s.name}</span>
-                        <div className="h-2 flex-1 overflow-hidden rounded-full bg-gray-100">
-                          <div
-                            className="h-full rounded-full bg-gray-900"
-                            style={{ width: `${(s.count / staffLoad[0].count) * 100}%` }}
-                          />
+                  <div className="space-y-1.5 rounded-xl border border-gray-200 bg-white p-3">
+                    {staffLoad.map((s) => {
+                      const max = Math.max(...staffLoad.map((x) => x.open + x.resolved));
+                      return (
+                        <div key={s.name} className="flex items-center gap-3">
+                          <span className="w-32 shrink-0 truncate text-sm text-gray-700" title={s.name}>{s.name}</span>
+                          <div className="flex h-2 flex-1 overflow-hidden rounded-full bg-gray-100">
+                            <div className="h-full bg-gray-900" style={{ width: `${(s.open / max) * 100}%` }} />
+                            <div className="h-full bg-green-500" style={{ width: `${(s.resolved / max) * 100}%` }} />
+                          </div>
+                          <span className="w-36 shrink-0 text-right text-xs text-gray-500">
+                            <span className="font-medium text-gray-900">{s.open}</span> belum ·{' '}
+                            <span className="font-medium text-green-700">{s.resolved}</span> sudah
+                          </span>
                         </div>
-                        <span className="w-6 shrink-0 text-right text-sm text-gray-500">{s.count}</span>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>
             )}
+
+            {isAdmin && <ResolveAllPanel nomor={nomor} onChanged={() => void load()} />}
 
             {/* 2 kolom breakdown -- tetap tampil buat semua role, ini
                 gambaran umum sistem, bukan data personal per-staff */}

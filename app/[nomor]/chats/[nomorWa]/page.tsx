@@ -174,6 +174,13 @@ function ChatThreadContent({ nomor, nomorWa }: { nomor: Nomor; nomorWa: string }
                 )}
               </div>
 
+              <Link
+                href={`/${nomor}/riwayat?nomor_wa=${nomorWa}`}
+                className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
+              >
+                Riwayat bot
+              </Link>
+
               <button
                 onClick={exportCsv}
                 className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50"

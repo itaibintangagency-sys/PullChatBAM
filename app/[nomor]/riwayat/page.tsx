@@ -1,6 +1,8 @@
 'use client';
 
-import { useState, use } from 'react';
+import { Suspense, useEffect, useState, use } from 'react';
+import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { RequireNomor } from '@/components/RouteGuard';
 import { NavHeader } from '@/components/NavHeader';
 import { supabase } from '@/lib/supabase';
@@ -18,18 +20,31 @@ function outcomeBadge(outcome: string | null) {
   return 'bg-gray-100 text-gray-600';
 }
 
+interface Kandidat {
+  nomor_wa: string;
+  nama: string | null;
+  platform_username: string | null;
+}
+
+// Input berisi huruf -> dianggap pencarian nama/username, bukan nomor
+function isNameQuery(raw: string): boolean {
+  return /[a-zA-Z]/.test(raw);
+}
+
 function RiwayatContent({ nomor }: { nomor: Nomor }) {
-  const [nomorWa, setNomorWa] = useState('');
+  const searchParams = useSearchParams();
+  const nomorDariTautan = searchParams.get('nomor_wa');
+
+  const [input, setInput] = useState('');
   const [logs, setLogs] = useState<BotDecisionLog[]>([]);
+  const [kandidat, setKandidat] = useState<Kandidat[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
+  const [onlyEskalasi, setOnlyEskalasi] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  async function handleSearch(e: React.FormEvent) {
-    e.preventDefault();
-    const normalized = normalizeNomor(nomorWa);
-    if (!normalized) return;
-
+  async function loadRiwayat(normalized: string) {
+    setKandidat(null);
     setLoading(true);
     setSearched(true);
     const { data } = await supabase
@@ -42,22 +57,64 @@ function RiwayatContent({ nomor }: { nomor: Nomor }) {
     setLoading(false);
   }
 
+  async function cariNama(q: string) {
+    // Buang karakter yang punya arti khusus di filter PostgREST
+    const bersih = q.replace(/[,()%*\\]/g, ' ').trim();
+    if (bersih.length < 2) return;
+    setLoading(true);
+    setSearched(false);
+    setLogs([]);
+    const { data } = await supabase
+      .from('phonebook')
+      .select('nomor_wa, nama, platform_username')
+      .eq('bot_source', nomor)
+      .or(`nama.ilike.%${bersih}%,platform_username.ilike.%${bersih}%`)
+      .limit(10);
+    setKandidat((data as Kandidat[]) || []);
+    setLoading(false);
+  }
+
+  async function handleSearch(e: React.FormEvent) {
+    e.preventDefault();
+    if (isNameQuery(input)) {
+      await cariNama(input);
+      return;
+    }
+    const normalized = normalizeNomor(input);
+    if (!normalized) return;
+    setInput(normalized);
+    await loadRiwayat(normalized);
+  }
+
+  // Dibuka dari tautan (mis. tombol "Riwayat bot" di Chat log) -> langsung cari
+  useEffect(() => {
+    if (!nomorDariTautan) return;
+    const normalized = normalizeNomor(nomorDariTautan);
+    if (!normalized) return;
+    // Membuka halaman dari tautan memang harus langsung memuat data (sinkron dengan URL)
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setInput(normalized);
+    void loadRiwayat(normalized);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nomorDariTautan, nomor]);
+
+  const tampil = onlyEskalasi ? logs.filter((l) => l.trigger_eskalasi || (l.outcome || '').includes('ESCALAT')) : logs;
+
   return (
     <div className="pl-56">
       <NavHeader nomor={nomor} />
       <main className="mx-auto max-w-3xl px-4 py-8">
         <h1 className="mb-1 text-lg font-medium text-gray-900">Riwayat Customer</h1>
         <p className="mb-6 text-sm text-gray-500">
-          Cari 1 nomor WA, lihat jejak lengkap tiap keputusan bot — berguna buat debug kenapa bot balas begitu.
+          Cari 1 customer, lihat jejak lengkap tiap keputusan bot — berguna buat debug kenapa bot balas begitu.
         </p>
 
         <form onSubmit={handleSearch} className="mb-6 flex gap-2">
           <input
             type="text"
-            inputMode="numeric"
-            placeholder="Nomor WA (62812xxxxxxx)"
-            value={nomorWa}
-            onChange={(e) => setNomorWa(normalizeNomor(e.target.value))}
+            placeholder="Nomor WA (62812xxxxxxx) atau nama / username"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
             className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-gray-500"
           />
           <button
@@ -70,18 +127,54 @@ function RiwayatContent({ nomor }: { nomor: Nomor }) {
 
         {loading ? (
           <p className="text-sm text-gray-400">Memuat...</p>
+        ) : kandidat ? (
+          kandidat.length === 0 ? (
+            <p className="text-sm text-gray-400">Tidak ada customer dengan nama itu di bot {nomor}.</p>
+          ) : (
+            <div>
+              <p className="mb-2 text-xs text-gray-400">Pilih customer:</p>
+              <div className="divide-y divide-gray-100 rounded-xl border border-gray-200 bg-white">
+                {kandidat.map((k) => (
+                  <button
+                    key={k.nomor_wa}
+                    type="button"
+                    onClick={() => {
+                      setInput(k.nomor_wa);
+                      void loadRiwayat(k.nomor_wa);
+                    }}
+                    className="flex w-full items-center justify-between px-4 py-3 text-left hover:bg-gray-50"
+                  >
+                    <span className="text-sm font-medium text-gray-900">{k.nama || k.platform_username || k.nomor_wa}</span>
+                    <span className="text-xs text-gray-400">{k.nomor_wa}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )
         ) : !searched ? (
-          <p className="text-sm text-gray-400">Masukkan nomor WA untuk mulai.</p>
+          <p className="text-sm text-gray-400">Masukkan nomor WA, atau ketik nama untuk mencari.</p>
         ) : logs.length === 0 ? (
           <p className="text-sm text-gray-400">Tidak ada riwayat untuk nomor ini di bot {nomor}.</p>
         ) : (
           <div>
-            <p className="mb-2 text-xs text-gray-400">
-              {logs[0].nama_brand ? `${logs[0].nama_brand} · ` : ''}
-              {logs.length} entri, terbaru di atas
-            </p>
+            <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+              <p className="text-xs text-gray-400">
+                {logs[0].nama_brand ? `${logs[0].nama_brand} · ` : ''}
+                {tampil.length} entri{onlyEskalasi ? ` eskalasi (dari ${logs.length})` : ''}, terbaru di atas
+              </p>
+              <div className="flex items-center gap-3">
+                <label className="flex cursor-pointer items-center gap-1.5 text-xs text-gray-600">
+                  <input type="checkbox" checked={onlyEskalasi} onChange={(e) => setOnlyEskalasi(e.target.checked)} />
+                  Hanya eskalasi
+                </label>
+                <Link href={`/${nomor}/chats/${logs[0].nomor_wa}`} className="text-xs text-blue-600 hover:underline">
+                  Buka chat log
+                </Link>
+              </div>
+            </div>
+            {tampil.length === 0 && <p className="text-sm text-gray-400">Tidak ada entri eskalasi untuk nomor ini.</p>}
             <div className="space-y-2">
-              {logs.map((log) => {
+              {tampil.map((log) => {
                 const expanded = expandedId === log.id;
                 return (
                   <div key={log.id} className="rounded-xl border border-gray-200 bg-white">
@@ -153,7 +246,9 @@ export default function RiwayatPage({ params }: { params: Promise<{ nomor: strin
   const { nomor } = use(params);
   return (
     <RequireNomor>
-      <RiwayatContent nomor={nomor as Nomor} />
+      <Suspense fallback={null}>
+        <RiwayatContent nomor={nomor as Nomor} />
+      </Suspense>
     </RequireNomor>
   );
 }

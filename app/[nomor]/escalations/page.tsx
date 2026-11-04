@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo, use } from 'react';
 import { RequireNomor } from '@/components/RouteGuard';
 import { NavHeader } from '@/components/NavHeader';
 import { useAuth } from '@/lib/AuthContext';
+import { ResolveAllPanel } from '@/components/ResolveAllPanel';
 import { supabase } from '@/lib/supabase';
 import { Nomor, Escalation } from '@/lib/types';
 import { SkeletonRow } from '@/components/Skeleton';
@@ -38,8 +39,39 @@ function isAssignedToAlias(assignedTo: string | null, alias: string | null): boo
   return tokens.includes(alias);
 }
 
+type SortKey = 'prioritas' | 'masuk' | 'nama' | 'staff' | 'status';
+type SortDir = 'asc' | 'desc';
+
+const SORT_OPTIONS: { key: SortKey; label: string }[] = [
+  { key: 'prioritas', label: 'Prioritas' },
+  { key: 'masuk', label: 'Waktu masuk' },
+  { key: 'nama', label: 'Nama customer' },
+  { key: 'staff', label: 'Nama staff' },
+  { key: 'status', label: 'Status' },
+];
+
+const PRIORITY_ORDER: Record<string, number> = { HIGH: 0, MEDIUM: 1, LOW: 2 };
+
+function compareBy(key: SortKey, a: Escalation, b: Escalation): number {
+  switch (key) {
+    case 'prioritas':
+      return (PRIORITY_ORDER[a.priority || ''] ?? 3) - (PRIORITY_ORDER[b.priority || ''] ?? 3);
+    case 'masuk':
+      return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+    case 'nama':
+      return (a.nama || a.nomor_wa).localeCompare(b.nama || b.nomor_wa, 'id');
+    case 'staff':
+      // Tiket tanpa staff selalu di akhir saat A-Z
+      return (a.assigned_to || '￿').localeCompare(b.assigned_to || '￿', 'id');
+    case 'status':
+      return (a.status || '').localeCompare(b.status || '');
+  }
+}
+
 function EscalationsContent({ nomor }: { nomor: Nomor }) {
   const { profile } = useAuth();
+  const [sortKey, setSortKey] = useState<SortKey>('prioritas');
+  const [sortDir, setSortDir] = useState<SortDir>('asc');
   const [items, setItems] = useState<Escalation[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('OPEN');
@@ -96,14 +128,14 @@ function EscalationsContent({ nomor }: { nomor: Nomor }) {
     if (statusFilter !== 'all') list = list.filter((i) => i.status === statusFilter);
     if (priorityFilter !== 'all') list = list.filter((i) => i.priority === priorityFilter);
 
-    const priorityOrder: Record<string, number> = { HIGH: 0, MEDIUM: 1, LOW: 2 };
+    // Urutan utama sesuai pilihan; kalau sama, tiket yang paling lama menunggu di atas
+    const dir = sortDir === 'asc' ? 1 : -1;
     return [...list].sort((a, b) => {
-      const pa = priorityOrder[a.priority || ''] ?? 3;
-      const pb = priorityOrder[b.priority || ''] ?? 3;
-      if (pa !== pb) return pa - pb;
+      const primary = compareBy(sortKey, a, b);
+      if (primary !== 0) return primary * dir;
       return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
     });
-  }, [items, statusFilter, priorityFilter, scopeFilter, isAdmin, profile?.escalation_alias]);
+  }, [items, statusFilter, priorityFilter, scopeFilter, sortKey, sortDir, isAdmin, profile?.escalation_alias]);
 
   const myOpenCount = useMemo(
     () =>
@@ -177,6 +209,8 @@ function EscalationsContent({ nomor }: { nomor: Nomor }) {
           </div>
         )}
 
+        <ResolveAllPanel nomor={nomor} onChanged={load} />
+
         {/* Controls */}
         <div className="mb-4 flex flex-wrap items-center gap-2">
           {!isAdmin && (
@@ -211,10 +245,36 @@ function EscalationsContent({ nomor }: { nomor: Nomor }) {
               {s === 'OPEN' ? 'Terbuka' : s === 'RESOLVE' ? 'Selesai' : 'Semua'}
             </button>
           ))}
+          <div className="ml-auto flex items-center gap-1">
+            <select
+              aria-label="Urutkan berdasarkan"
+              value={sortKey}
+              onChange={(e) => {
+                setSortKey(e.target.value as SortKey);
+                setSortDir(e.target.value === 'masuk' ? 'desc' : 'asc');
+              }}
+              className="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700"
+            >
+              {SORT_OPTIONS.map((o) => (
+                <option key={o.key} value={o.key}>
+                  Urutkan: {o.label}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              onClick={() => setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))}
+              aria-label={sortDir === 'asc' ? 'Urutan naik, klik untuk membalik' : 'Urutan turun, klik untuk membalik'}
+              title={sortDir === 'asc' ? 'A-Z / lama ke baru' : 'Z-A / baru ke lama'}
+              className="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+            >
+              {sortDir === 'asc' ? '▲' : '▼'}
+            </button>
+          </div>
           <select
             value={priorityFilter}
             onChange={(e) => setPriorityFilter(e.target.value as PriorityFilter)}
-            className="ml-auto rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700"
+            className="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700"
           >
             <option value="all">Semua prioritas</option>
             <option value="HIGH">HIGH</option>

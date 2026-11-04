@@ -5,6 +5,13 @@ export const NOMOR_LABELS: Record<Nomor, string> = {
   '1052': 'Nomor 1052 (089526861052)',
 };
 
+export type MetaChannel = 'ig' | 'fb';
+
+export const META_CHANNELS: Record<MetaChannel, { label: string; session: string; botSource: string }> = {
+  ig: { label: 'Instagram', session: 'Meta Bot IG', botSource: 'META_IG' },
+  fb: { label: 'Facebook', session: 'Meta Bot FB', botSource: 'META_FB' },
+};
+
 export interface ChatLog {
   id: string;
   timestamp: string;
@@ -218,4 +225,22 @@ export interface GroupedCustomer {
   category: string | null;
   stage: string;
   last_msg_at: string | null;
+}
+
+export interface ResolveRequest {
+  id: string;
+  bot_source: string;
+  requested_by_alias: string;
+  requested_by_nomor: string | null;
+  requested_via: 'WA' | 'WEB';
+  ticket_ids: string[];
+  ticket_count: number;
+  resolution_text: string | null;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'EXPIRED';
+  requested_at: string;
+  expires_at: string;
+  decided_by_nomor: string | null;
+  decided_at: string | null;
+  decision_note: string | null;
+  resolved_count: number | null;
 }
