@@ -30,7 +30,7 @@ type WfStatus = { active: boolean } | { error: string };
 // Urutan default kategori (dipakai saat sort by Kategori, dan sebagai
 // tie-break) -- tambah nama kategori baru di sini kalau ada kategori baru
 // ke depannya, urutan tetap terkontrol (bukan alfabetis acak).
-const CATEGORY_ORDER = ['Global', 'BOT Channel WA', 'Chatbot WA', 'Chatbot Meta (IG/FB)', 'Pendukung Chat Log'];
+const CATEGORY_ORDER = ['Global', 'BOT Channel WA', 'Chatbot WA', 'Chatbot Meta (IG/FB)', 'Pendukung Chat Log', 'Pelaporan'];
 
 // Daftar manual -- update di sini kalau ada workflow baru yang terhubung ke
 // Kirana Monitor, atau ada workflow existing yang berubah fungsi.
@@ -270,6 +270,16 @@ const CONNECTED_SYSTEMS: ConnectedSystem[] = [
     n8nId: 'DH9RiyaUlCl6BXqD',
     toggleable: false,
     lockedReason: 'Alat sekali jalan',
+  },
+  {
+    id: 'daily-chat-report',
+    name: 'BAM - Daily Chat Report',
+    category: 'Pelaporan',
+    description:
+      'Tiap pagi 07.00 WIB: menganalisa seluruh chat kemarin (WA 1052, WA 7484, IG/FB) — angka dari database plus analisa isi chat oleh AI — lalu mengirim laporan eksekutif ke pemegang flag receives_daily_report dan menyimpannya di daily_chat_reports.',
+    n8nUrl: 'https://n8n-crfkzibn5git.jkt3.sumopod.my.id/workflow/d5L5ylXcTy9IZTUP',
+    n8nId: 'd5L5ylXcTy9IZTUP',
+    toggleable: true,
   },
 ];
 
