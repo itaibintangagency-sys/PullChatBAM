@@ -281,6 +281,16 @@ const CONNECTED_SYSTEMS: ConnectedSystem[] = [
     n8nId: 'd5L5ylXcTy9IZTUP',
     toggleable: true,
   },
+  {
+    id: 'workflow-health-monitor',
+    name: 'BAM - Workflow Health Monitor',
+    category: 'Pelaporan',
+    description:
+      'Tiap 15 menit memeriksa error eksekusi n8n (dikelompokkan: kredensial, nama node, jaringan, dll; tanpa spam), detak workflow terjadwal, dan sesi WAHA. Pukul 07.30 WIB mengirim ringkasan pagi plus pemeriksaan nama node dan kredensial. Penerima: flag receives_system_alert.',
+    n8nUrl: 'https://n8n-crfkzibn5git.jkt3.sumopod.my.id/workflow/SPfcViOUHtLoIrZF',
+    n8nId: 'SPfcViOUHtLoIrZF',
+    toggleable: true,
+  },
 ];
 
 // Riwayat ON/OFF lama dicatat dengan id workflow versi sebelumnya (dan sebagian tanpa id). Semuanya milik bot WA utama.
