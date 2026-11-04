@@ -213,6 +213,7 @@ export interface L0Config {
   is_blacklist_reviewer?: boolean;
   is_resolve_approver?: boolean;
   is_channel_verifier?: boolean;
+  report_scope?: 'ALL' | 'WA1052' | 'WA7484_IG';
   receives_daily_report?: boolean;
   receives_system_alert?: boolean;
   pool: string | null;

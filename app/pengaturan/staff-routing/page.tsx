@@ -252,6 +252,21 @@ function StaffRoutingContent() {
     load();
   }
 
+  async function setReportScope(item: L0Config, scope: 'ALL' | 'WA1052' | 'WA7484_IG') {
+    setRowError('');
+    setNotice('');
+    const { error: updateError } = await supabase
+      .from('l0_config')
+      .update({ report_scope: scope, updated_at: new Date().toISOString() })
+      .eq('id', item.id);
+    if (updateError) {
+      setRowError('Gagal mengubah cakupan laporan.');
+      return;
+    }
+    setNotice('Cakupan laporan diperbarui.');
+    load();
+  }
+
   async function toggleActive(item: L0Config) {
     setRowError('');
     setNotice('');
@@ -486,6 +501,20 @@ function StaffRoutingContent() {
                                     );
                                   })}
                                 </div>
+                                {(item.receives_daily_report || item.receives_system_alert) && (
+                                  <label className="mt-2 flex items-center gap-2 text-xs text-gray-500">
+                                    Cakupan laporan
+                                    <select
+                                      value={item.report_scope || 'ALL'}
+                                      onChange={(e) => setReportScope(item, e.target.value as 'ALL' | 'WA1052' | 'WA7484_IG')}
+                                      className="rounded-lg border border-gray-300 px-2 py-1 text-xs text-gray-700"
+                                    >
+                                      <option value="ALL">Semua (WA 1052, WA 7484, IG)</option>
+                                      <option value="WA1052">Hanya WA 1052</option>
+                                      <option value="WA7484_IG">Hanya WA 7484 + IG</option>
+                                    </select>
+                                  </label>
+                                )}
                               </div>
 
                               <div className="flex shrink-0 items-center gap-3">
