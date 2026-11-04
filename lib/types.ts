@@ -208,6 +208,13 @@ export interface PhonebookListEntry {
 
 export interface L0Config {
   // ...field yang sudah ada...
+  can_control_bot?: boolean;
+  receives_blacklist_alert?: boolean;
+  is_blacklist_reviewer?: boolean;
+  is_resolve_approver?: boolean;
+  is_channel_verifier?: boolean;
+  receives_daily_report?: boolean;
+  receives_system_alert?: boolean;
   pool: string | null;
   urutan: number | null;
   escalation_alias: string | null;

@@ -95,7 +95,7 @@ const MENU_DOCS: MenuDoc[] = [
     nama: 'Pengaturan → Staff & Routing',
     untukSiapa: 'Khusus Super Admin',
     fungsi:
-  'Kelola siapa yang menerima notifikasi bot, dikelompokkan per pool. Bisa ubah nama, nomor WA, pool, urutan, dan aktif/nonaktif. Perubahan berlaku di bot mulai pesan berikutnya. Pool ALERT = penerima notifikasi blacklist/dormant sekaligus peninjau CLEARED/BL, minimal 1 staf aktif.'
+  'Kelola siapa yang menerima notifikasi bot, dikelompokkan per pool. Bisa ubah nama, nomor WA, pool, urutan, dan aktif/nonaktif. Perubahan berlaku di bot mulai pesan berikutnya. Pool ALERT = penerima notifikasi blacklist/dormant sekaligus peninjau CLEARED/BL, minimal 1 staf aktif. Tiap nomor juga punya peran (tombol bulat di bawah namanya): laporan harian, alert sistem, notif blacklist, peninjau blacklist, penyetuju RESOLVE ALL, verifikator Channel, dan kontrol bot. Memindahkan tugas ke nomor lain cukup menyalakan peran di nomor baru dan mematikannya di nomor lama.'
   },
   {
     nama: 'Pengaturan → Kelola Staff',

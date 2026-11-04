@@ -7,6 +7,26 @@ import { useAuth } from '@/lib/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { L0Config, RoutingPool } from '@/lib/types';
 
+// Peran per nomor. Bot dan workflow n8n membaca flag ini dari l0_config, jadi memindahkan tugas ke nomor lain cukup lewat sini.
+type RoleKey =
+  | 'can_control_bot'
+  | 'receives_blacklist_alert'
+  | 'is_blacklist_reviewer'
+  | 'is_resolve_approver'
+  | 'is_channel_verifier'
+  | 'receives_daily_report'
+  | 'receives_system_alert';
+
+const ROLE_FLAGS: { key: RoleKey; label: string; hint: string }[] = [
+  { key: 'receives_daily_report', label: 'Laporan harian', hint: 'Menerima laporan eksekutif analisa chat setiap pagi' },
+  { key: 'receives_system_alert', label: 'Alert sistem', hint: 'Menerima laporan error dan kesehatan workflow n8n' },
+  { key: 'receives_blacklist_alert', label: 'Notif blacklist', hint: 'Menerima kabar kandidat blacklist' },
+  { key: 'is_blacklist_reviewer', label: 'Peninjau blacklist', hint: 'Boleh memutuskan bukan spam / blacklist lewat WA' },
+  { key: 'is_resolve_approver', label: 'Penyetuju RESOLVE ALL', hint: 'Menyetujui atau menolak RESOLVE ALL' },
+  { key: 'is_channel_verifier', label: 'Verifikator Channel', hint: 'Mengontrol dan memverifikasi Channel WA' },
+  { key: 'can_control_bot', label: 'Kontrol bot', hint: 'Boleh BOT_ON / BOT_OFF / BOT_STATUS' },
+];
+
 function normalizeNomor(raw: string): string {
   let cleaned = raw.replace(/[^0-9]/g, '');
   if (cleaned.startsWith('0')) cleaned = '62' + cleaned.slice(1);
@@ -214,6 +234,21 @@ function StaffRoutingContent() {
     }
     setEditingId(null);
     setNotice('Tersimpan. Bot memakai data baru mulai pesan berikutnya.');
+    load();
+  }
+
+  async function toggleRole(item: L0Config, key: RoleKey) {
+    setRowError('');
+    setNotice('');
+    const { error: updateError } = await supabase
+      .from('l0_config')
+      .update({ [key]: !item[key], updated_at: new Date().toISOString() })
+      .eq('id', item.id);
+    if (updateError) {
+      setRowError('Gagal mengubah peran.');
+      return;
+    }
+    setNotice('Peran diperbarui. Berlaku mulai proses berikutnya.');
     load();
   }
 
@@ -432,6 +467,25 @@ function StaffRoutingContent() {
                                   </p>
                                 )}
                                 <p className="text-xs text-gray-300">alias tiket: {item.escalation_alias || item.variable_key} (tetap)</p>
+                                <div className="mt-2 flex flex-wrap gap-1.5">
+                                  {ROLE_FLAGS.map((f) => {
+                                    const on = !!item[f.key];
+                                    return (
+                                      <button
+                                        key={f.key}
+                                        type="button"
+                                        title={f.hint}
+                                        aria-pressed={on}
+                                        onClick={() => toggleRole(item, f.key)}
+                                        className={`rounded-full border px-2 py-0.5 text-xs ${
+                                          on ? 'border-gray-900 bg-gray-900 text-white' : 'border-gray-200 text-gray-400 hover:border-gray-400 hover:text-gray-600'
+                                        }`}
+                                      >
+                                        {f.label}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
                               </div>
 
                               <div className="flex shrink-0 items-center gap-3">
