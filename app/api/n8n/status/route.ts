@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { authenticateStaff } from '@/lib/apiAuth';
 
 const N8N_BASE_URL = 'https://n8n-crfkzibn5git.jkt3.sumopod.my.id';
 
 export async function POST(req: NextRequest) {
+  const caller = await authenticateStaff(req);
+  if (caller instanceof NextResponse) return caller;
+
   const apiKey = process.env.N8N_API_KEY;
   if (!apiKey) {
     return NextResponse.json(
@@ -13,8 +17,8 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json().catch(() => null);
   const ids: string[] = body?.ids;
-  if (!Array.isArray(ids) || ids.length === 0) {
-    return NextResponse.json({ error: 'ids kosong' }, { status: 400 });
+  if (!Array.isArray(ids) || ids.length === 0 || ids.length > 50 || ids.some((id) => !/^[A-Za-z0-9]{8,32}$/.test(String(id)))) {
+    return NextResponse.json({ error: 'ids tidak valid' }, { status: 400 });
   }
 
   const results: Record<string, { active: boolean } | { error: string }> = {};
