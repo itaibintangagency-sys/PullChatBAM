@@ -11,9 +11,7 @@ interface FeedbackRow {
   id: string;
   nomor_wa: string;
   nama: string | null;
-  ticket_id: string | null;
   kategori: string | null;
-  staff_handled: string | null;
   rating: number | null;
   feedback_text: string | null;
   requested_at: string;
@@ -33,7 +31,7 @@ async function fetchFeedback(nomor: Nomor): Promise<FeedbackRow[] | null> {
   for (let from = 0; ; from += FETCH_PAGE) {
     const { data, error } = await supabase
       .from('feedback')
-      .select('id, nomor_wa, nama, ticket_id, kategori, staff_handled, rating, feedback_text, requested_at, status')
+      .select('id, nomor_wa, nama, kategori, rating, feedback_text, requested_at, status')
       .eq('bot_source', nomor)
       .order('requested_at', { ascending: false })
       .order('id')
@@ -126,19 +124,23 @@ function FeedbackContent({ nomor }: { nomor: Nomor }) {
   const lowCount = rated.filter((r) => (r.rating as number) <= LOW_RATING).length;
   const responseRate = scoped.length ? (rated.length / scoped.length) * 100 : null;
 
-  const perStaff = useMemo(() => {
-    const map = new Map<string, { staff: string; minta: number; nilai: number[] }>();
+  // Penilaian ini untuk bot Kirana (bukan staf), jadi dikelompokkan per jenis pengguna bot (Creator/Seller)
+  const perKategori = useMemo(() => {
+    const map = new Map<string, { kategori: string; minta: number; nilai: number[] }>();
     for (const r of scoped) {
-      const key = (r.staff_handled || '').trim() || '(tanpa staff)';
-      const g = map.get(key) ?? { staff: key, minta: 0, nilai: [] };
+      const key = (r.kategori || '').trim() || '(belum diketahui)';
+      const g = map.get(key) ?? { kategori: key, minta: 0, nilai: [] };
       g.minta++;
       if (r.status === 'DONE' && r.rating !== null) g.nilai.push(r.rating);
       map.set(key, g);
     }
-    return Array.from(map.values())
-      .filter((g) => g.nilai.length > 0)
-      .sort((a, b) => b.nilai.length - a.nilai.length);
+    return Array.from(map.values()).sort((a, b) => b.minta - a.minta);
   }, [scoped]);
+
+  const distribusi = useMemo(
+    () => [5, 4, 3, 2, 1].map((n) => ({ n, jumlah: rated.filter((r) => r.rating === n).length })),
+    [rated]
+  );
 
   const trend = useMemo(() => {
     const map = new Map<string, number[]>();
@@ -168,9 +170,10 @@ function FeedbackContent({ nomor }: { nomor: Nomor }) {
     <div className="pl-56">
       <NavHeader nomor={nomor} />
       <main className="mx-auto max-w-5xl px-4 py-8">
-        <h1 className="mb-1 text-lg font-medium text-gray-900">Feedback customer</h1>
+        <h1 className="mb-1 text-lg font-medium text-gray-900">Feedback chatbot</h1>
         <p className="mb-6 text-sm text-gray-500">
-          Penilaian yang dikirim customer lewat WhatsApp setelah tiket eskalasi bot {nomor} ditangani.
+          Penilaian customer terhadap bot Kirana ({nomor}). Di akhir percakapan, bot meminta rating 1–5 dan alasan (boleh dikosongkan atau di-skip).
+          Ini penilaian untuk bot, bukan untuk staf.
         </p>
 
         {failed && (
@@ -225,26 +228,44 @@ function FeedbackContent({ nomor }: { nomor: Nomor }) {
               <>
                 <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                   <div>
-                    <p className="mb-2 text-sm font-medium text-gray-900">Rata-rata per staff</p>
+                    <p className="mb-2 text-sm font-medium text-gray-900">Sebaran rating</p>
+                    <div className="space-y-1.5 rounded-xl border border-gray-200 bg-white p-3">
+                      {distribusi.map((d) => (
+                        <div key={d.n} className="flex items-center gap-3">
+                          <span className={`w-14 shrink-0 text-xs ${ratingTone(d.n)}`}>{d.n} ★</span>
+                          <div className="h-2 flex-1 overflow-hidden rounded-full bg-gray-100">
+                            <div
+                              className={`h-full rounded-full ${d.n <= LOW_RATING ? 'bg-red-500' : d.n === 3 ? 'bg-amber-500' : 'bg-green-500'}`}
+                              style={{ width: `${rated.length ? (d.jumlah / rated.length) * 100 : 0}%` }}
+                            />
+                          </div>
+                          <span className="w-20 shrink-0 text-right text-xs text-gray-500">
+                            <span className="font-medium text-gray-900">{d.jumlah}</span>
+                            {rated.length ? ` · ${Math.round((d.jumlah / rated.length) * 100)}%` : ''}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="mb-2 mt-4 text-sm font-medium text-gray-900">Per jenis pengguna bot</p>
                     <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
                       <table className="w-full text-left text-sm">
                         <thead className="border-b border-gray-200 bg-gray-50 text-xs text-gray-500">
                           <tr>
-                            <th className="px-3 py-2 font-medium">Staff</th>
-                            <th className="px-3 py-2 text-right font-medium">Dinilai</th>
+                            <th className="px-3 py-2 font-medium">Kategori</th>
+                            <th className="px-3 py-2 text-right font-medium">Diminta</th>
+                            <th className="px-3 py-2 text-right font-medium">Menilai</th>
                             <th className="px-3 py-2 text-right font-medium">Rata-rata</th>
-                            <th className="px-3 py-2 text-right font-medium">Rendah</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
-                          {perStaff.map((g) => (
-                            <tr key={g.staff}>
-                              <td className="px-3 py-2 text-gray-800">{g.staff}</td>
+                          {perKategori.map((g) => (
+                            <tr key={g.kategori}>
+                              <td className="px-3 py-2 text-gray-800">{g.kategori}</td>
+                              <td className="px-3 py-2 text-right text-gray-600">{g.minta}</td>
                               <td className="px-3 py-2 text-right text-gray-600">{g.nilai.length}</td>
-                              <td className={`px-3 py-2 text-right font-medium ${ratingTone(Math.round(avg(g.nilai) as number))}`}>
+                              <td className={`px-3 py-2 text-right font-medium ${g.nilai.length ? ratingTone(Math.round(avg(g.nilai) as number)) : 'text-gray-400'}`}>
                                 {fmtAvg(avg(g.nilai))}
                               </td>
-                              <td className="px-3 py-2 text-right text-gray-600">{g.nilai.filter((n) => n <= LOW_RATING).length}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -274,7 +295,7 @@ function FeedbackContent({ nomor }: { nomor: Nomor }) {
 
                 <div>
                   <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-sm font-medium text-gray-900">Penilaian terbaru</p>
+                    <p className="text-sm font-medium text-gray-900">Penilaian dan alasan terbaru</p>
                     <div className="flex gap-2">
                       <button type="button" onClick={() => setTampil('SEMUA')} aria-pressed={tampil === 'SEMUA'} className={chipCls(tampil === 'SEMUA')}>
                         Semua
@@ -311,9 +332,7 @@ function FeedbackContent({ nomor }: { nomor: Nomor }) {
                           {(r.feedback_text || '').trim() && (
                             <p className="mt-1 whitespace-pre-wrap text-sm text-gray-700">{r.feedback_text}</p>
                           )}
-                          <p className="mt-1 text-xs text-gray-400">
-                            {[r.kategori, r.staff_handled && `Staff: ${r.staff_handled}`, r.ticket_id].filter(Boolean).join(' · ')}
-                          </p>
+                          {r.kategori && <p className="mt-1 text-xs text-gray-400">{r.kategori}</p>}
                         </div>
                       ))}
                     </div>

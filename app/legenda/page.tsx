@@ -70,10 +70,10 @@ const MENU_DOCS: MenuDoc[] = [
       'Gabungan status bot + riwayat eskalasi + riwayat dormant buat 1 nomor WA, dalam 1 halaman ringkas. Murni buat dilihat, tidak ada tombol ubah data di sini.',
   },
   {
-    nama: 'Feedback customer',
+    nama: 'Feedback chatbot',
     untukSiapa: 'Semua orang',
     fungsi:
-      'Penilaian (1-5) dan komentar yang dikirim customer lewat WhatsApp setelah tiket ditangani. Ada rata-rata per staff, tren mingguan, dan daftar rating rendah untuk ditindaklanjuti.',
+      'Penilaian (1-5) dan alasan dari customer untuk bot Kirana, diminta di akhir percakapan dengan bot (bukan penilaian untuk staf). Ada rata-rata, sebaran rating, tingkat respons, tren mingguan, dan daftar rating rendah untuk memperbaiki bot.',
   },
   {
     nama: 'Nomor internal',

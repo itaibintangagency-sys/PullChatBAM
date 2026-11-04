@@ -31,7 +31,7 @@ export function NavHeader({ nomor }: { nomor: Nomor }) {
         { href: `/${nomor}/escalations`, label: 'Eskalasi' },
         { href: '/eskalasi', label: 'Tabel Eskalasi' },
         { href: `/${nomor}/dormant`, label: 'Dormant' },
-        { href: `/${nomor}/feedback`, label: 'Feedback customer' },
+        { href: `/${nomor}/feedback`, label: 'Feedback chatbot' },
       ],
     },
     {
