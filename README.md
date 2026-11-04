@@ -12,7 +12,7 @@ Stack: Next.js 16 (App Router), React 19, Tailwind 4, Supabase (Auth, Postgres, 
 - Chat log IG/FB (`/meta/chats`): percakapan bot Meta, dipisah per kanal
 - Riwayat Customer: jejak keputusan bot per nomor (bisa dicari lewat nama atau username, filter "hanya eskalasi")
 - Profil Customer dan Phonebook
-- Feedback customer: rating dan komentar dari WhatsApp, statistik per staf dan tren mingguan (menggantikan "Review harian")
+- Feedback chatbot: penilaian customer terhadap bot Kirana (bukan staf): rata-rata rating, tingkat respons, sebaran rating, rekap per jenis pengguna, tren mingguan, dan alasan terbaru
 - Status Bot: tabel semua workflow n8n yang terhubung dengan status aktif/nonaktif langsung dari n8n; klik baris untuk melihat riwayat ON/OFF workflow itu. Super Admin bisa menyalakan atau mematikan workflow dari tabel (jaring pengaman dan sub-workflow terkunci); tiap aksi tercatat di `bot_toggle_logs`
 
 **Tiket eskalasi**
