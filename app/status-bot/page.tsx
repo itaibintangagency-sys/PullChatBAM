@@ -30,7 +30,7 @@ type WfStatus = { active: boolean } | { error: string };
 // Urutan default kategori (dipakai saat sort by Kategori, dan sebagai
 // tie-break) -- tambah nama kategori baru di sini kalau ada kategori baru
 // ke depannya, urutan tetap terkontrol (bukan alfabetis acak).
-const CATEGORY_ORDER = ['Global', 'BOT Channel WA', 'Chatbot WA', 'Chatbot Meta (IG)'];
+const CATEGORY_ORDER = ['Global', 'BOT Channel WA', 'Chatbot WA', 'Chatbot Meta (IG/FB)', 'Pendukung Chat Log'];
 
 // Daftar manual -- update di sini kalau ada workflow baru yang terhubung ke
 // Kirana Monitor, atau ada workflow existing yang berubah fungsi.
@@ -51,7 +51,7 @@ const CONNECTED_SYSTEMS: ConnectedSystem[] = [
     name: 'WF_Sync_Sheet_ke_Supabase',
     category: 'BOT Channel WA',
     description:
-      "Sinkronisasi bulanan (tgl 5, jam 5 pagi): tarik data dari Google Sheet 'LINK CAMPAIGN CHANNEL WA', bersihkan & upsert massal ke tabel campaign_links.",
+      "Menarik data Google Sheet 'LINK CAMPAIGN CHANNEL WA' (hasil filter), membersihkan & upsert massal ke tabel campaign_links. Berjalan setelah verifikator membalas TRUE; ringkasannya dikirim ke semua verifikator Channel.",
     n8nUrl: 'https://n8n-crfkzibn5git.jkt3.sumopod.my.id/workflow/w1BS525iVEp6Ch3R',
     n8nId: 'w1BS525iVEp6Ch3R',
     toggleable: true,
@@ -72,7 +72,7 @@ const CONNECTED_SYSTEMS: ConnectedSystem[] = [
     name: 'WF_Select_and_Verify',
     category: 'BOT Channel WA',
     description:
-      'Algoritma pemilihan 10 link produk per slot (rotasi brand & kategori L1–L3 biar variatif), kirim ke WA untuk diverifikasi (balas OK/GANTI).',
+      'Memilih produk untuk slot broadcast (minimal 3 dari 4 kondisi: kadaluarsa, komisi MCN, komisi affiliate, cooldown), mencatat ke broadcast_verification, lalu memanggil WF_Generate_and_Send. Slot kosong diberitahukan ke verifikator Channel.',
     relations: ['Dipanggil oleh: WF_Broadcast_Watcher, WF_Web_Command, WF_Command_Listener'],
     n8nUrl: 'https://n8n-crfkzibn5git.jkt3.sumopod.my.id/workflow/vzBgNkpxyUPErtlo',
     n8nId: 'vzBgNkpxyUPErtlo',
@@ -95,7 +95,7 @@ const CONNECTED_SYSTEMS: ConnectedSystem[] = [
     name: 'WF_Command_Listener',
     category: 'BOT Channel WA',
     description:
-      'Versi WA dari kontrol broadcast (khusus nomor Patrik) — 6 keyword: OK, GANTI, SEND NOW, STOP, START, STATUS.',
+      'Versi WA dari kontrol broadcast untuk pemegang flag is_channel_verifier di l0_config — keyword OK, GANTI, SEND NOW, STOP, START, STATUS, serta TRUE/FALSE untuk hasil filter sheet.',
     relations: ['Memanggil: WF_Select_and_Verify, WF_Generate_and_Send'],
     n8nUrl: 'https://n8n-crfkzibn5git.jkt3.sumopod.my.id/workflow/L27QQJxlaC2xwH1f',
     n8nId: 'L27QQJxlaC2xwH1f',
@@ -115,11 +115,11 @@ const CONNECTED_SYSTEMS: ConnectedSystem[] = [
   },
   {
     id: 'commandbot-wa',
-    name: 'WF_CommandBot_WA_Unified',
+    name: 'WF Command United updated 13okt',
     category: 'Chatbot WA',
     description:
-      'Otak utama bot WhatsApp untuk nomor 1052 & 7484 — deteksi spam, mesin stage percakapan, eskalasi & routing staff, simpan semua log/session.',
-    relations: ['Dikontrol oleh: WF_BotToggle_v2.0 (activate/deactivate via n8n API)'],
+      'Otak utama bot WhatsApp untuk nomor 1052 & 7484 (workflow "WF_CommandBot_WA_Unified" di dokumentasi lama) — deteksi spam & blacklist, mesin stage percakapan, eskalasi & routing staff, simpan semua log/session.',
+    relations: ['Dikontrol oleh: WF_BotToggle_v2.0 (activate/deactivate via n8n API)', 'Memanggil: BAM - Blacklist Cleared Welcome (saat nomor dinyatakan bukan spam lewat WA)'],
     n8nUrl: 'https://n8n-crfkzibn5git.jkt3.sumopod.my.id/workflow/k7R1YsdYmxMvZkkJ',
     n8nId: 'k7R1YsdYmxMvZkkJ',
     toggleable: true,
@@ -129,7 +129,7 @@ const CONNECTED_SYSTEMS: ConnectedSystem[] = [
     name: 'WF_StaffReply_Handler_Unified',
     category: 'Chatbot WA',
     description:
-      'Interface command WA untuk staff kelola eskalasi (ketik MENU, resolve tiket) tanpa perlu buka Kirana Monitor.',
+      'Interface command WA untuk staff kelola eskalasi tanpa perlu buka Kirana Monitor: MENU, RESOLVE, RESOLVE ALL, dan SETUJU/TOLAK dari penyetuju.',
     n8nUrl: 'https://n8n-crfkzibn5git.jkt3.sumopod.my.id/workflow/MdoDzcH0D3r8XsWb',
     n8nId: 'MdoDzcH0D3r8XsWb',
     toggleable: true,
@@ -148,12 +148,128 @@ const CONNECTED_SYSTEMS: ConnectedSystem[] = [
   {
     id: 'meta-bot-handler',
     name: 'Meta Bot Handler (IG+FB) v8',
-    category: 'Chatbot Meta (IG)',
+    category: 'Chatbot Meta (IG/FB)',
     description:
       'Bot Instagram DM & Facebook Messenger — versi Meta dari CommandBot, termasuk fitur follow-gate campaign di Reels (bagian deteksi komentar belum dibangun).',
     n8nUrl: 'https://n8n-crfkzibn5git.jkt3.sumopod.my.id/workflow/oQ9G8xozbzZp64yE',
     n8nId: 'oQ9G8xozbzZp64yE',
     toggleable: true,
+  },
+  {
+    id: 'filter-sheet',
+    name: 'WF_Filter_Sheet_UNFILTERED_ke_RESULT_FULL v4',
+    category: 'BOT Channel WA',
+    description:
+      'Terjadwal tiap Selasa 16:00 WIB — menyaring sheet UNFILTERED ke RESULT_FULL dan mengirim proposal ke verifikator Channel. Hasil baru berlaku setelah dibalas TRUE.',
+    relations: ['Berlanjut ke: WF_Sync_Sheet_ke_Supabase setelah TRUE'],
+    n8nUrl: 'https://n8n-crfkzibn5git.jkt3.sumopod.my.id/workflow/HwFXxTlbzTZKrDD8',
+    n8nId: 'HwFXxTlbzTZKrDD8',
+    toggleable: true,
+  },
+  {
+    id: 'blacklist-notify',
+    name: 'BAM - Blacklist Notify',
+    category: 'Chatbot WA',
+    description:
+      'Webhook dari Kirana Monitor saat staf menambah blacklist manual — kirim notifikasi WA ke pemegang flag receives_blacklist_alert.',
+    n8nUrl: 'https://n8n-crfkzibn5git.jkt3.sumopod.my.id/workflow/nhbTeJJ2yLolJemW',
+    n8nId: 'nhbTeJJ2yLolJemW',
+    toggleable: true,
+  },
+  {
+    id: 'blacklist-cleared',
+    name: 'BAM - Blacklist Cleared Welcome',
+    category: 'Chatbot WA',
+    description:
+      'Setelah nomor dinyatakan bukan spam (CLEARED): kirim sambutan Kirana satu kali, catat di chat_logs, dan reset stage ke CONFIRM_NAME. Satu jalur untuk WA dan web.',
+    relations: ['Dipanggil oleh: WF Command United (WA), Kirana Monitor (web)'],
+    n8nUrl: 'https://n8n-crfkzibn5git.jkt3.sumopod.my.id/workflow/0XaLHvEAvMGekzLV',
+    n8nId: '0XaLHvEAvMGekzLV',
+    toggleable: true,
+  },
+  {
+    id: 'resolve-notify',
+    name: 'BAM - Resolve Request Notify',
+    category: 'Chatbot WA',
+    description:
+      'Webhook dari Kirana Monitor saat RESOLVE ALL diajukan lewat web — kirim permintaan persetujuan ke semua pemegang flag is_resolve_approver.',
+    relations: ['Keputusan SETUJU/TOLAK diproses WF_StaffReply_Handler_Unified'],
+    n8nUrl: 'https://n8n-crfkzibn5git.jkt3.sumopod.my.id/workflow/VpvZzBBtyUhQPI9l',
+    n8nId: 'VpvZzBBtyUhQPI9l',
+    toggleable: true,
+  },
+  {
+    id: 'fullchatlog-1052',
+    name: 'WF_FullChatLog_1052_v1.1',
+    category: 'Pendukung Chat Log',
+    description:
+      'Mencatat setiap pesan nomor 1052 (masuk dan keluar) ke tabel chat_logs secara real-time.',
+    n8nUrl: 'https://n8n-crfkzibn5git.jkt3.sumopod.my.id/workflow/1QXVl96GYhFYVaYD',
+    n8nId: '1QXVl96GYhFYVaYD',
+    toggleable: true,
+  },
+  {
+    id: 'fullchatlog-7484',
+    name: 'WF_FullChatLog_7484_v1.1',
+    category: 'Pendukung Chat Log',
+    description:
+      'Mencatat setiap pesan nomor 7484 (masuk dan keluar) ke tabel chat_logs secara real-time.',
+    n8nUrl: 'https://n8n-crfkzibn5git.jkt3.sumopod.my.id/workflow/QYKyOqPQo2XlQDKp',
+    n8nId: 'QYKyOqPQo2XlQDKp',
+    toggleable: true,
+  },
+  {
+    id: 'pull-room-history',
+    name: 'WF_PullRoomHistory_v1.4',
+    category: 'Pendukung Chat Log',
+    description:
+      'Menarik riwayat chat per room dari WAHA untuk melengkapi chat_logs (deskripsi berdasarkan nama workflow).',
+    n8nUrl: 'https://n8n-crfkzibn5git.jkt3.sumopod.my.id/workflow/GAiuS4AHwW0ldCXx',
+    n8nId: 'GAiuS4AHwW0ldCXx',
+    toggleable: true,
+  },
+  {
+    id: 'backfill-1052',
+    name: 'WF_BackfillMediaUrl_1052_v1.1',
+    category: 'Pendukung Chat Log',
+    description:
+      'Mengisi media_url yang kosong pada chat_logs nomor 1052 (deskripsi berdasarkan nama workflow).',
+    n8nUrl: 'https://n8n-crfkzibn5git.jkt3.sumopod.my.id/workflow/wQwTCNsEqBz5mVh8',
+    n8nId: 'wQwTCNsEqBz5mVh8',
+    toggleable: true,
+  },
+  {
+    id: 'backfill-7484',
+    name: 'WF_BackfillMediaUrl_7484_v1.1',
+    category: 'Pendukung Chat Log',
+    description:
+      'Mengisi media_url yang kosong pada chat_logs nomor 7484 (deskripsi berdasarkan nama workflow). Saat ini nonaktif.',
+    n8nUrl: 'https://n8n-crfkzibn5git.jkt3.sumopod.my.id/workflow/rb8bAIeoRA4ucwgp',
+    n8nId: 'rb8bAIeoRA4ucwgp',
+    toggleable: false,
+    lockedReason: 'Alat sekali jalan',
+  },
+  {
+    id: 'import-1052',
+    name: 'WF_HistoricalImport_1052_v1.1',
+    category: 'Pendukung Chat Log',
+    description:
+      'Impor riwayat chat lama nomor 1052 ke chat_logs (source = historical). Dijalankan manual; saat ini nonaktif.',
+    n8nUrl: 'https://n8n-crfkzibn5git.jkt3.sumopod.my.id/workflow/vfcujCA1f0iob6Y0',
+    n8nId: 'vfcujCA1f0iob6Y0',
+    toggleable: false,
+    lockedReason: 'Alat sekali jalan',
+  },
+  {
+    id: 'import-7484',
+    name: 'WF_HistoricalImport_7484_v1.1',
+    category: 'Pendukung Chat Log',
+    description:
+      'Impor riwayat chat lama nomor 7484 ke chat_logs (source = historical). Dijalankan manual; saat ini nonaktif.',
+    n8nUrl: 'https://n8n-crfkzibn5git.jkt3.sumopod.my.id/workflow/DH9RiyaUlCl6BXqD',
+    n8nId: 'DH9RiyaUlCl6BXqD',
+    toggleable: false,
+    lockedReason: 'Alat sekali jalan',
   },
 ];
 
