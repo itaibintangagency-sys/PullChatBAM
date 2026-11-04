@@ -276,7 +276,7 @@ const CONNECTED_SYSTEMS: ConnectedSystem[] = [
     name: 'BAM - Daily Chat Report',
     category: 'Pelaporan',
     description:
-      'Tiap pagi 07.00 WIB: menganalisa seluruh chat kemarin (WA 1052, WA 7484, IG/FB) — angka dari database plus analisa isi chat oleh AI — lalu mengirim laporan eksekutif ke pemegang flag receives_daily_report dan menyimpannya di daily_chat_reports.',
+      'Tiap pagi 09.00 WIB: menganalisa seluruh chat kemarin (WA 1052, WA 7484, IG/FB) — angka dari database plus analisa isi chat oleh AI — lalu mengirim laporan eksekutif ke pemegang flag receives_daily_report dan menyimpannya di daily_chat_reports.',
     n8nUrl: 'https://n8n-crfkzibn5git.jkt3.sumopod.my.id/workflow/d5L5ylXcTy9IZTUP',
     n8nId: 'd5L5ylXcTy9IZTUP',
     toggleable: true,
@@ -286,7 +286,7 @@ const CONNECTED_SYSTEMS: ConnectedSystem[] = [
     name: 'BAM - Workflow Health Monitor',
     category: 'Pelaporan',
     description:
-      'Tiap 15 menit memeriksa error eksekusi n8n (dikelompokkan: kredensial, nama node, jaringan, dll; tanpa spam), detak workflow terjadwal, dan sesi WAHA. Pukul 07.30 WIB mengirim ringkasan pagi plus pemeriksaan nama node dan kredensial. Penerima: flag receives_system_alert.',
+      'Tiap 15 menit memeriksa error eksekusi n8n (dikelompokkan: kredensial, nama node, jaringan, dll; tanpa spam), detak workflow terjadwal, dan sesi WAHA. Pukul 09.00 WIB mengirim ringkasan harian plus pemeriksaan nama node dan kredensial. Penerima: flag receives_system_alert.',
     n8nUrl: 'https://n8n-crfkzibn5git.jkt3.sumopod.my.id/workflow/SPfcViOUHtLoIrZF',
     n8nId: 'SPfcViOUHtLoIrZF',
     toggleable: true,
