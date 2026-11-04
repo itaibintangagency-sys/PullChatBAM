@@ -13,7 +13,7 @@ Stack: Next.js 16 (App Router), React 19, Tailwind 4, Supabase (Auth, Postgres, 
 - Riwayat Customer: jejak keputusan bot per nomor (bisa dicari lewat nama atau username, filter "hanya eskalasi")
 - Profil Customer dan Phonebook
 - Feedback customer: rating dan komentar dari WhatsApp, statistik per staf dan tren mingguan (menggantikan "Review harian")
-- Status Bot: aktif atau nonaktif beserta riwayat toggle
+- Status Bot: tabel semua workflow n8n yang terhubung dengan status aktif/nonaktif langsung dari n8n; klik baris untuk melihat riwayat ON/OFF workflow itu. Super Admin bisa menyalakan atau mematikan workflow dari tabel (jaring pengaman dan sub-workflow terkunci); tiap aksi tercatat di `bot_toggle_logs`
 
 **Tiket eskalasi**
 - Halaman Eskalasi per bot: urutkan menurut prioritas, waktu masuk, nama, staf, atau status; tandai selesai satu per satu
@@ -125,5 +125,4 @@ Media tidak diunduh ulang; yang ditampilkan adalah `media_url` yang sudah ada.
 
 ## Catatan
 
-- Ada dua halaman Status Bot dengan isi berbeda: `/status-bot` (ada di menu) dan `/sttatus-bot` (ejaan keliru, tidak ada di menu, versi lebih panjang). Belum diputuskan mana yang dipertahankan
 - `AGENTS.md` ditulis ulang otomatis oleh `next dev`; `CLAUDE.md` hanya mengimpornya. Keduanya tidak perlu diubah manual
