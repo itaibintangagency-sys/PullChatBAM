@@ -383,7 +383,7 @@ function HistoryTable({ sys, logs }: { sys: ConnectedSystem; logs: BotToggleLog[
           ↓ Export CSV ({filtered.length})
         </button>
       </div>
-      <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+      <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
         <table className="w-full text-sm">
           <thead className="border-b border-gray-200 bg-gray-50">
             <tr>
@@ -591,7 +591,69 @@ function BotStatusContent() {
           </div>
         )}
 
-        <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+        {/* Ponsel: kartu per workflow (tabel terlalu lebar untuk layar sempit) */}
+        <div className="space-y-2 md:hidden">
+          {sortedSystems.map((sys) => {
+            const open = expanded.has(sys.id);
+            const st = wfStatus[sys.n8nId];
+            const sysLogs = logsByWorkflow[sys.n8nId] || [];
+            return (
+              <div key={sys.id} className="rounded-xl border border-gray-200 bg-white">
+                <button type="button" onClick={() => toggleExpanded(sys.id)} aria-expanded={open} className="block w-full px-3 py-3 text-left">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="break-words text-sm font-medium text-gray-900">{sys.name}</p>
+                      <p className="text-xs text-gray-400">{sys.category} · {sysLogs.length} riwayat</p>
+                    </div>
+                    <span className="text-gray-400" aria-hidden="true">{open ? '▾' : '▸'}</span>
+                  </div>
+                  <p className="mt-2 text-xs text-gray-500">{sys.description}</p>
+                  {sys.relations && sys.relations.length > 0 && (
+                    <div className="mt-1 space-y-0.5">
+                      {sys.relations.map((r, i) => (
+                        <p key={i} className="text-[11px] italic text-gray-400">↳ {r}</p>
+                      ))}
+                    </div>
+                  )}
+                </button>
+                <div className="flex flex-wrap items-center gap-2 border-t border-gray-100 px-3 py-2">
+                  {!st ? (
+                    <span className="text-xs text-gray-400">Memeriksa...</span>
+                  ) : 'error' in st ? (
+                    <span className="text-xs text-amber-700" title={st.error}>Gagal cek</span>
+                  ) : (
+                    <span className={`rounded px-2 py-0.5 text-xs ${st.active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                      {st.active ? '🟢 Aktif' : '🔴 Nonaktif'}
+                    </span>
+                  )}
+                  {isAdmin &&
+                    (sys.toggleable ? (
+                      <button
+                        onClick={() => handleToggle(sys)}
+                        disabled={togglingId === sys.id || !st || 'error' in st}
+                        className="rounded border border-gray-300 px-2 py-1 text-xs text-gray-600 hover:bg-gray-100 disabled:opacity-40"
+                      >
+                        {togglingId === sys.id ? 'Memproses...' : st && 'active' in st && st.active ? 'Matikan' : 'Nyalakan'}
+                      </button>
+                    ) : (
+                      <span className="text-xs text-gray-400">🔒 {sys.lockedReason}</span>
+                    ))}
+                  <a href={sys.n8nUrl} target="_blank" rel="noopener noreferrer" className="ml-auto whitespace-nowrap text-xs font-medium text-gray-400 hover:text-gray-700">
+                    Buka di n8n ↗
+                  </a>
+                </div>
+                {open && (
+                  <div className="overflow-x-auto border-t border-gray-100 bg-gray-50/60 px-3 py-3">
+                    <p className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-400">Riwayat ON/OFF</p>
+                    {loading ? <p className="text-sm text-gray-400">Memuat...</p> : <HistoryTable sys={sys} logs={sysLogs} />}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="hidden overflow-hidden rounded-xl border border-gray-200 bg-white md:block">
           <table className="w-full text-sm">
             <thead className="border-b border-gray-200 bg-gray-50">
               <tr>

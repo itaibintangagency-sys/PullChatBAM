@@ -247,7 +247,7 @@ function FeedbackContent({ nomor }: { nomor: Nomor }) {
                       ))}
                     </div>
                     <p className="mb-2 mt-4 text-sm font-medium text-gray-900">Per jenis pengguna bot</p>
-                    <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+                    <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
                       <table className="w-full text-left text-sm">
                         <thead className="border-b border-gray-200 bg-gray-50 text-xs text-gray-500">
                           <tr>

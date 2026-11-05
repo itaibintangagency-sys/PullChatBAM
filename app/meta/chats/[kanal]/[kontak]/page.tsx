@@ -92,7 +92,7 @@ function MetaThreadContent({ kanal, kontak }: { kanal: MetaChannel; kontak: stri
       <NavHeader nomor={nomor || '1052'} />
       <div className="flex h-[calc(100vh-3rem)] flex-col md:h-screen">
         <header className="border-b border-gray-200 bg-white px-4 py-3">
-          <div className="mx-auto flex max-w-3xl items-center justify-between">
+          <div className="mx-auto flex max-w-3xl flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-3">
               <Link href="/meta/chats" className="text-sm text-gray-400 hover:text-gray-700">
                 ← Kembali

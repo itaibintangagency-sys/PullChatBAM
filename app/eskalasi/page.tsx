@@ -682,7 +682,7 @@ function EskalasiContent() {
   const selectCls = 'w-full min-w-0 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 outline-none focus:border-gray-500 md:w-auto';
   const chipCls = (aktif: boolean) =>
     `shrink-0 whitespace-nowrap rounded-lg px-3 py-1.5 text-sm ${aktif ? 'bg-gray-900 text-white' : 'border border-gray-300 text-gray-600 hover:bg-gray-50'}`;
-  const popCls = 'absolute z-20 mt-1 max-h-72 w-64 overflow-auto rounded-lg border border-gray-200 bg-white p-2 shadow-lg';
+  const popCls = 'absolute left-0 z-20 mt-1 max-h-72 w-64 max-w-[calc(100vw-1.5rem)] overflow-auto rounded-lg border border-gray-200 bg-white p-2 shadow-lg';
   const summaryCls = 'block cursor-pointer list-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50';
 
   return (

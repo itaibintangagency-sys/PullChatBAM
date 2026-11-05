@@ -256,7 +256,7 @@ function ChannelContent() {
           <>
             {/* ===== Bagian 1: Status ===== */}
             <div
-              className={`mb-4 flex items-center justify-between rounded-2xl border p-6 ${
+              className={`mb-4 flex flex-col gap-4 rounded-2xl border p-4 md:flex-row md:items-center md:justify-between md:p-6 ${
                 control?.is_active ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'
               }`}
             >
@@ -274,7 +274,7 @@ function ChannelContent() {
                   </p>
                 )}
               </div>
-              <div className="flex gap-2">
+              <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
                 <button
                   onClick={() => runCommand('STOP')}
                   disabled={!control?.is_active || actionLoading !== null}

@@ -128,7 +128,7 @@ function ChatThreadContent({ nomor, nomorWa }: { nomor: Nomor; nomorWa: string }
       <NavHeader nomor={nomor} />
       <div className="flex h-[calc(100vh-3rem)] flex-col md:h-screen">
         <header className="border-b border-gray-200 bg-white px-4 py-3">
-          <div className="mx-auto flex max-w-3xl items-center justify-between">
+          <div className="mx-auto flex max-w-3xl flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-3">
               <Link href={`/${nomor}/chats`} className="text-sm text-gray-400 hover:text-gray-700">
                 ← Kembali
@@ -139,7 +139,7 @@ function ChatThreadContent({ nomor, nomorWa }: { nomor: Nomor; nomorWa: string }
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               {activeJob?.status === 'running' && (
                 <span className="flex items-center gap-2 rounded-lg bg-blue-50 px-3 py-1.5 text-xs text-blue-700">
                   <span className="h-2 w-2 animate-pulse rounded-full bg-blue-500" />

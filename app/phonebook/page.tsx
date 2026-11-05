@@ -190,26 +190,26 @@ function PhonebookContent() {
           <p className="text-sm text-gray-400">Tidak ada customer yang cocok.</p>
         ) : (
           <>
-            <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
-              <table className="w-full text-sm">
+            <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
+              <table className="w-full text-xs md:text-sm">
                 <thead className="border-b border-gray-200 bg-gray-50">
                   <tr>
-                    <th onClick={() => toggleSort('nama')} className="cursor-pointer px-4 py-2 text-left font-medium text-gray-700">
+                    <th onClick={() => toggleSort('nama')} className="cursor-pointer px-2 py-2 text-left font-medium text-gray-700 md:px-4">
                       Nama <SortArrow col="nama" />
                     </th>
-                    <th onClick={() => toggleSort('nomor_wa')} className="cursor-pointer px-4 py-2 text-left font-medium text-gray-700">
+                    <th onClick={() => toggleSort('nomor_wa')} className="cursor-pointer px-2 py-2 text-left font-medium text-gray-700 md:px-4">
                       Nomor WA <SortArrow col="nomor_wa" />
                     </th>
-                    <th onClick={() => toggleSort('bots')} className="cursor-pointer px-4 py-2 text-left font-medium text-gray-700">
+                    <th onClick={() => toggleSort('bots')} className="cursor-pointer px-2 py-2 text-left font-medium text-gray-700 md:px-4">
                       Bot <SortArrow col="bots" />
                     </th>
-                    <th onClick={() => toggleSort('category')} className="cursor-pointer px-4 py-2 text-left font-medium text-gray-700">
+                    <th onClick={() => toggleSort('category')} className="hidden cursor-pointer px-4 md:table-cell py-2 text-left font-medium text-gray-700">
                       Kategori <SortArrow col="category" />
                     </th>
-                    <th onClick={() => toggleSort('stage')} className="cursor-pointer px-4 py-2 text-left font-medium text-gray-700">
+                    <th onClick={() => toggleSort('stage')} className="hidden cursor-pointer px-4 md:table-cell py-2 text-left font-medium text-gray-700">
                       Stage <SortArrow col="stage" />
                     </th>
-                    <th onClick={() => toggleSort('last_msg_at')} className="cursor-pointer px-4 py-2 text-left font-medium text-gray-700">
+                    <th onClick={() => toggleSort('last_msg_at')} className="cursor-pointer px-2 py-2 text-left font-medium text-gray-700 md:px-4">
                       Terakhir Chat <SortArrow col="last_msg_at" />
                     </th>
                   </tr>
@@ -217,9 +217,9 @@ function PhonebookContent() {
                 <tbody className="divide-y divide-gray-100">
                   {paged.map((c) => (
                     <tr key={c.nomor_wa} className={c.bots.length === 2 ? 'bg-amber-50' : ''}>
-                      <td className="px-4 py-2 font-medium text-gray-900">{c.nama || '-'}</td>
-                      <td className="px-4 py-2 text-gray-600">{c.nomor_wa}</td>
-                      <td className="px-4 py-2">
+                      <td className="px-2 py-2 md:px-4 font-medium text-gray-900">{c.nama || '-'}</td>
+                      <td className="px-2 py-2 md:px-4 text-gray-600">{c.nomor_wa}</td>
+                      <td className="px-2 py-2 md:px-4">
                         <div className="flex gap-1">
                           {c.bots.map((b) => (
                             <span key={b} className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${botBadgeClass(b)}`}>
@@ -228,9 +228,9 @@ function PhonebookContent() {
                           ))}
                         </div>
                       </td>
-                      <td className="px-4 py-2 text-gray-600">{c.category || '-'}</td>
-                      <td className="px-4 py-2 text-gray-600">{c.stage}</td>
-                      <td className="px-4 py-2 text-gray-500">
+                      <td className="hidden px-4 py-2 text-gray-600 md:table-cell">{c.category || '-'}</td>
+                      <td className="hidden px-4 py-2 text-gray-600 md:table-cell">{c.stage}</td>
+                      <td className="px-2 py-2 md:px-4 text-gray-500">
                         {c.last_msg_at ? new Date(c.last_msg_at).toLocaleDateString('id-ID') : '-'}
                       </td>
                     </tr>
@@ -239,7 +239,7 @@ function PhonebookContent() {
               </table>
             </div>
 
-            <div className="mt-3 flex items-center justify-between text-sm text-gray-500">
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-sm text-gray-500">
               <span>
                 Menampilkan {(pageSafe - 1) * PAGE_SIZE + 1}–{Math.min(pageSafe * PAGE_SIZE, filtered.length)} dari {filtered.length} customer
               </span>
