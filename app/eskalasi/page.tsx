@@ -1099,6 +1099,12 @@ function EskalasiContent() {
                 const c = toMs(r.created_at);
                 return (
                   <div key={r.id} className="rounded-xl border border-gray-200 bg-white">
+                    {canResolveRow(r) && (
+                      <label className="flex items-center gap-2 border-b border-gray-100 px-3 py-2 text-xs text-gray-600">
+                        <input type="checkbox" checked={selected.has(r.id)} onChange={() => toggleDipilih(r.id)} />
+                        Pilih untuk diselesaikan sekaligus
+                      </label>
+                    )}
                     <button
                       type="button"
                       aria-expanded={expanded}
@@ -1108,6 +1114,9 @@ function EskalasiContent() {
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0">
                           <p className="truncate text-sm font-medium text-gray-900">{r.nama || r.nomor_wa}</p>
+                          {r.platform_username && !/^\d+$/.test(r.platform_username) && (
+                            <p className="truncate text-xs text-gray-500">@{r.platform_username}</p>
+                          )}
                           <p className="text-xs text-gray-500">{jenisLabel(r.category, r.sub_category)}</p>
                         </div>
                         {statusBadge(st)}

@@ -68,6 +68,33 @@ export async function POST(req: NextRequest) {
     selesai += hasil.filter(Boolean).length;
   }
 
+  // Pelanggan yang sesinya tertahan di STANDBY dikembalikan ke menu utama, kecuali masih punya tiket lain yang belum selesai.
+  try {
+    const { data: detail } = await db
+      .from('escalations')
+      .select('id, bot_source, platform_user_id, nomor_wa')
+      .in('id', layak.map((r) => r.id));
+    for (const t of detail || []) {
+      const idPelanggan = String(t.platform_user_id || t.nomor_wa || '').trim();
+      if (!idPelanggan || !/^[0-9A-Za-z_.:-]{3,64}$/.test(idPelanggan) || !t.bot_source) continue;
+      const { count } = await db
+        .from('escalations')
+        .select('id', { count: 'exact', head: true })
+        .or(`platform_user_id.eq.${idPelanggan},nomor_wa.eq.${idPelanggan}`)
+        .eq('bot_source', t.bot_source)
+        .neq('status', 'RESOLVE');
+      if ((count ?? 0) > 0) continue;
+      await db
+        .from('phonebook')
+        .update({ stage: 'MAIN_MENU', stage_updated_at: new Date().toISOString(), category: null, sub_category: null, context_json: {} })
+        .eq('bot_source', t.bot_source)
+        .eq('stage', 'STANDBY')
+        .or(`platform_user_id.eq.${idPelanggan},nomor_wa.eq.${idPelanggan}`);
+    }
+  } catch (e) {
+    console.error('[eskalasi-resolve] reset sesi STANDBY gagal', e);
+  }
+
   console.log(`[eskalasi-resolve] ${caller.displayName} menyelesaikan ${selesai}/${ids.length} tiket`);
   return NextResponse.json({ ok: true, diminta: ids.length, selesai, dilewati: ids.length - layak.length });
 }
