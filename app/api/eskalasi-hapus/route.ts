@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
   const db = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
   const { data: esc } = await db
     .from('escalations')
-    .select('id, ticket_id, nomor_wa, platform_user_id, nama')
+    .select('id, ticket_id, bot_source, nomor_wa, platform_user_id, nama')
     .eq('id', id)
     .maybeSingle();
   if (!esc) return NextResponse.json({ error: 'Tiket tidak ditemukan (mungkin sudah dihapus)' }, { status: 404 });
@@ -61,6 +61,19 @@ export async function POST(req: NextRequest) {
   const e = await db.from('escalations').delete().eq('id', id);
   if (e.error) return NextResponse.json({ error: 'Gagal menghapus tiket' }, { status: 500 });
 
+  // Status percakapan bot tersimpan di phonebook, bukan di tiket: kembalikan ke MAIN_MENU supaya pelanggan
+  // tidak tertahan di STANDBY setelah tiketnya dihapus.
+  let sesiDireset = 0;
+  if (ids.length) {
+    let q = db
+      .from('phonebook')
+      .update({ stage: 'MAIN_MENU', stage_updated_at: new Date().toISOString(), category: null, sub_category: null, context_json: {} }, { count: 'exact' })
+      .or(`nomor_wa.in.(${daftar}),platform_user_id.in.(${daftar})`);
+    if (esc.bot_source) q = q.eq('bot_source', esc.bot_source);
+    const s = await q;
+    if (!s.error) sesiDireset = s.count ?? 0;
+  }
+
   let pesanChat = 0;
   let logKeputusanBot = 0;
   if (hapusRiwayat && ids.length) {
@@ -74,5 +87,5 @@ export async function POST(req: NextRequest) {
   }
 
   console.log(`[eskalasi-hapus] ${caller.displayName} menghapus ${esc.ticket_id}; riwayat=${hapusRiwayat} chat=${pesanChat} log=${logKeputusanBot}`);
-  return NextResponse.json({ ok: true, ticket_id: esc.ticket_id, pesanChat, logKeputusanBot });
+  return NextResponse.json({ ok: true, ticket_id: esc.ticket_id, pesanChat, logKeputusanBot, sesiDireset });
 }

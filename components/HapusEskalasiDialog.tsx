@@ -68,8 +68,8 @@ export function HapusEskalasiDialog({ tiket, onClose, onDone }: Props) {
     }
     onDone(
       denganRiwayat
-        ? `Tiket ${r.json.ticket_id} dan riwayat percakapan (${r.json.pesanChat} pesan) dihapus.`
-        : `Tiket ${r.json.ticket_id} dihapus. Riwayat percakapan tidak diubah.`
+        ? `Tiket ${r.json.ticket_id} dan riwayat percakapan (${r.json.pesanChat} pesan) dihapus. Sesi bot pelanggan dikembalikan ke menu utama.`
+        : `Tiket ${r.json.ticket_id} dihapus. Riwayat percakapan tidak diubah. Sesi bot pelanggan dikembalikan ke menu utama.`
     );
   }
 
@@ -128,7 +128,7 @@ export function HapusEskalasiDialog({ tiket, onClose, onDone }: Props) {
             </h2>
             <p className="mt-2 text-sm text-gray-700">Yang akan terhapus permanen:</p>
             <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-gray-700">
-              <li>Tiket {ringkas.ticket_id} beserta feedback dan data dormant-nya</li>
+              <li>Tiket {ringkas.ticket_id} beserta feedback dan data dormant-nya (sesi bot pelanggan juga dikembalikan ke menu utama)</li>
               <li>{ringkas.pesanChat} pesan di chat log pelanggan</li>
               <li>{ringkas.logKeputusanBot} catatan keputusan bot</li>
             </ul>
