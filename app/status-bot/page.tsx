@@ -119,7 +119,7 @@ const CONNECTED_SYSTEMS: ConnectedSystem[] = [
     category: 'Chatbot WA',
     description:
       'Otak utama bot WhatsApp untuk nomor 1052 & 7484 (workflow "WF_CommandBot_WA_Unified" di dokumentasi lama) — deteksi spam & blacklist, mesin stage percakapan, eskalasi & routing staff, simpan semua log/session.',
-    relations: ['Dikontrol oleh: WF_BotToggle_v2.0 (activate/deactivate via n8n API)', 'Memanggil: BAM - Blacklist Cleared Welcome (saat nomor dinyatakan bukan spam lewat WA)'],
+    relations: ['Dikontrol dari tombol di halaman ini (hanya Super Admin)', 'Memanggil: BAM - Blacklist Cleared Welcome (saat nomor dinyatakan bukan spam lewat WA)'],
     n8nUrl: 'https://n8n-crfkzibn5git.jkt3.sumopod.my.id/workflow/k7R1YsdYmxMvZkkJ',
     n8nId: 'k7R1YsdYmxMvZkkJ',
     toggleable: true,
@@ -139,8 +139,7 @@ const CONNECTED_SYSTEMS: ConnectedSystem[] = [
     name: 'WF_BotToggle_v2.0',
     category: 'Chatbot WA',
     description:
-      'Command BOT_ON/BOT_OFF/BOT_STATUS via WA dari nomor authorized — aktif/nonaktifkan bot lewat n8n API, catat ke bot_toggle_logs.',
-    relations: ['Mengontrol: WF_CommandBot_WA_Unified (via n8n API)'],
+      'Dinonaktifkan sengaja (5 Nov 2026): perintah BOT_ON/BOT_OFF/BOT_STATUS via WA tidak dipakai lagi. Bot dinyalakan atau dimatikan hanya lewat tombol di halaman ini. Jangan dinyalakan lagi kecuali perlu kembali ke kontrol via WA.',
     n8nUrl: 'https://n8n-crfkzibn5git.jkt3.sumopod.my.id/workflow/xaLrH3EDMDq9kHO7',
     n8nId: 'xaLrH3EDMDq9kHO7',
     toggleable: true,
@@ -351,8 +350,7 @@ function HistoryTable({ sys, logs }: { sys: ConnectedSystem; logs: BotToggleLog[
   if (logs.length === 0) {
     return (
       <p className="text-sm text-gray-400">
-        Belum ada riwayat ON/OFF untuk workflow ini. Riwayat tercatat setiap kali workflow dinyalakan atau dimatikan lewat tombol di tabel ini
-        {sys.id === 'bottoggle-v2' ? ' atau lewat perintah BOT_ON/BOT_OFF' : ''}.
+        Belum ada riwayat ON/OFF untuk workflow ini. Riwayat tercatat setiap kali workflow dinyalakan atau dimatikan lewat tombol di tabel ini.
       </p>
     );
   }
@@ -690,7 +688,7 @@ function BotStatusContent() {
           </table>
         </div>
         <p className="mt-3 text-xs text-gray-400">
-          Daftar dikelola manual di kode. Riwayat tercatat saat workflow dinyalakan atau dimatikan lewat tombol di sini (hanya Super Admin) atau lewat perintah BOT_ON/BOT_OFF.
+          Daftar dikelola manual di kode. Riwayat tercatat saat workflow dinyalakan atau dimatikan lewat tombol di sini (hanya Super Admin). Riwayat lama dari perintah BOT_ON/BOT_OFF via WA tetap ditampilkan.
         </p>
       </main>
     </div>

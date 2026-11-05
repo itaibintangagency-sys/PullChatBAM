@@ -216,6 +216,8 @@ export interface L0Config {
   report_scope?: 'ALL' | 'WA1052' | 'WA7484_IG';
   receives_daily_report?: boolean;
   receives_system_alert?: boolean;
+  receives_aduan_alert?: boolean;
+  hide_from_customer?: boolean;
   pool: string | null;
   urutan: number | null;
   escalation_alias: string | null;

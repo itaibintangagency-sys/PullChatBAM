@@ -9,7 +9,8 @@ import { L0Config, RoutingPool } from '@/lib/types';
 
 // Peran per nomor. Bot dan workflow n8n membaca flag ini dari l0_config, jadi memindahkan tugas ke nomor lain cukup lewat sini.
 type RoleKey =
-  | 'can_control_bot'
+  | 'receives_aduan_alert'
+  | 'hide_from_customer'
   | 'receives_blacklist_alert'
   | 'is_blacklist_reviewer'
   | 'is_resolve_approver'
@@ -20,11 +21,12 @@ type RoleKey =
 const ROLE_FLAGS: { key: RoleKey; label: string; hint: string }[] = [
   { key: 'receives_daily_report', label: 'Laporan harian', hint: 'Menerima laporan eksekutif analisa chat setiap pagi' },
   { key: 'receives_system_alert', label: 'Alert sistem', hint: 'Menerima laporan error dan kesehatan workflow n8n' },
+  { key: 'receives_aduan_alert', label: 'Notif aduan', hint: 'Menerima WA setiap tiket aduan, lowongan, atau keperluan lain baru' },
   { key: 'receives_blacklist_alert', label: 'Notif blacklist', hint: 'Menerima kabar kandidat blacklist' },
   { key: 'is_blacklist_reviewer', label: 'Peninjau blacklist', hint: 'Boleh memutuskan bukan spam / blacklist lewat WA' },
   { key: 'is_resolve_approver', label: 'Penyetuju RESOLVE ALL', hint: 'Menyetujui atau menolak RESOLVE ALL' },
   { key: 'is_channel_verifier', label: 'Verifikator Channel', hint: 'Mengontrol dan memverifikasi Channel WA' },
-  { key: 'can_control_bot', label: 'Kontrol bot', hint: 'Boleh BOT_ON / BOT_OFF / BOT_STATUS' },
+  { key: 'hide_from_customer', label: 'Sembunyikan dari pelanggan', hint: 'PIC internal: nomor ini tidak pernah ditampilkan ke pelanggan' },
 ];
 
 function normalizeNomor(raw: string): string {
