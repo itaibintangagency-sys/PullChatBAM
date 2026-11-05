@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { RequireAuth } from '@/components/RouteGuard';
 import { NavHeader } from '@/components/NavHeader';
 import { RefreshBar } from '@/components/RefreshBar';
+import { HapusEskalasiDialog } from '@/components/HapusEskalasiDialog';
 import { SkeletonRow } from '@/components/Skeleton';
 import { useAuth } from '@/lib/AuthContext';
 import { useAutoRefresh } from '@/lib/useAutoRefresh';
@@ -192,6 +193,9 @@ function EskalasiContent() {
     }
   });
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const isSuperAdmin = profile?.role === 'admin';
+  const [hapusTarget, setHapusTarget] = useState<EskalasiRow | null>(null);
+  const [hapusNotice, setHapusNotice] = useState('');
 
   const penerimaRef = useRef<HTMLDetailsElement>(null);
   const kolomRef = useRef<HTMLDetailsElement>(null);
@@ -472,6 +476,21 @@ function EskalasiContent() {
             </span>
           ) : null}
         </div>
+        {isSuperAdmin && (
+          <div className="sm:col-span-2 lg:col-span-3">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setHapusNotice('');
+                setHapusTarget(r);
+              }}
+              className="rounded-lg border border-red-300 px-3 py-1.5 text-sm text-red-700 hover:bg-red-50"
+            >
+              Hapus tiket
+            </button>
+          </div>
+        )}
       </dl>
     );
   }
@@ -494,6 +513,23 @@ function EskalasiContent() {
     <div className="pl-56">
       <NavHeader nomor={nomor || '1052'} />
       <main className="mx-auto max-w-7xl px-4 py-6">
+        {hapusTarget && (
+          <HapusEskalasiDialog
+            tiket={{ id: hapusTarget.id, ticket_id: hapusTarget.ticket_id, nama: hapusTarget.nama }}
+            onClose={() => setHapusTarget(null)}
+            onDone={(pesan) => {
+              setHapusTarget(null);
+              setExpandedId(null);
+              setHapusNotice(pesan);
+              void refreshNow();
+            }}
+          />
+        )}
+        {hapusNotice && (
+          <div className="mb-4 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700" role="status">
+            {hapusNotice}
+          </div>
+        )}
         <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
           <div>
             <h1 className="text-lg font-medium text-gray-900">Tabel Eskalasi</h1>
