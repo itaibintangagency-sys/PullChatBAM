@@ -53,7 +53,8 @@ Buka http://localhost:3000. Repo ini memakai Next.js versi baru; baca `AGENTS.md
 | `RESOLVE_NOTIFY_WEBHOOK_URL` | opsional | Menimpa URL webhook pemberitahuan penyetuju |
 | `CHANNEL_WEBHOOK_URL`, `CHANNEL_WEBHOOK_SECRET` | untuk Channel WA | Webhook n8n untuk perintah SEND NOW, OK, GANTI |
 | `N8N_API_KEY` | untuk Status Bot | API key n8n untuk membaca dan menyalakan atau mematikan workflow |
-| `WAHA_API_KEY` | untuk preview media | Proxy media WAHA (`/api/media-proxy`) |
+| `WAHA_API_KEY` | untuk preview media dan tes PIC | Proxy media WAHA (`/api/media-proxy`) dan pesan tes di Staff & Routing (`/api/pic-test`) |
+| `WAHA_TEST_SESSION` | opsional | Sesi WAHA pengirim pesan tes PIC. Default `Customer` |
 
 Tanpa variabel opsional, fitur terkait menampilkan pesan "Server not configured"; fitur lain tetap berjalan.
 
@@ -90,7 +91,7 @@ Flag diubah dari **Pengaturan → Staff & Routing** atau langsung di tabel. Nomo
 
 ## Aduan, lowongan, dan keperluan lain (nomor 7484)
 
-Menu **Aduan & Keperluan Lain** hanya ada di bot nomor 7484. Bot 1052 dan IG mengarahkan pelanggan ke nomor itu untuk aduan, lowongan, atau permintaan di luar menu. Tiket tersimpan di tabel `aduan_tickets` (maksimal satu tiket terbuka per pelanggan sampai selesai), dikirim ke email sesuai `bot_settings`, dan diberitahukan ke pemegang flag `receives_aduan_alert`. Tiket hanya dibuat lewat fungsi `create_aduan_ticket` (khusus service role). Teks dasar bot ada di tabel `bot_knowledge`, pengaturan email dan SLA di `bot_settings`.
+Menu **Aduan & Keperluan Lain** hanya ada di bot nomor 7484. Bot 1052 dan IG mengarahkan pelanggan ke nomor itu untuk aduan, lowongan, atau permintaan di luar menu. Tiket tersimpan di tabel `aduan_tickets` (maksimal satu tiket terbuka per pelanggan sampai selesai), dikirim ke email sesuai `bot_settings`, dan diberitahukan ke pemegang flag `receives_aduan_alert`. Tiket hanya dibuat lewat fungsi `create_aduan_ticket` (khusus service role). Admin menangani tiket di halaman **Aduan** (status Baru, Diproses, Selesai, Ditolak, catatan internal, penanda email gagal). Health Monitor mengabari pemegang `receives_system_alert` bila email tiket gagal atau belum terkirim lebih dari 10 menit. Di **Staff & Routing**, admin bisa memindahkan semua peran ke nomor lain, mengirim pesan tes WA, dan melihat peringatan konfigurasi peran. Teks dasar bot ada di tabel `bot_knowledge`, pengaturan email dan SLA di `bot_settings`.
 
 ## Alur RESOLVE ALL
 

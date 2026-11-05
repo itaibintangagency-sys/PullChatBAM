@@ -76,6 +76,11 @@ function StaffRoutingContent() {
   const [editPool, setEditPool] = useState(NO_POOL);
   const [editUrutan, setEditUrutan] = useState('');
 
+  // Pindah semua peran ke nomor lain + pesan tes
+  const [moveFromId, setMoveFromId] = useState<string | null>(null);
+  const [moveToId, setMoveToId] = useState('');
+  const [testingId, setTestingId] = useState<string | null>(null);
+
   useEffect(() => {
     load();
   }, []);
@@ -288,6 +293,97 @@ function StaffRoutingContent() {
     load();
   }
 
+  // Peringatan konfigurasi: peran penting tanpa pemegang aktif, PIC internal yang masih ada di pool pelanggan, nomor ganda.
+  const peringatan = useMemo(() => {
+    const out: string[] = [];
+    const aktifBerNomor = items.filter((i) => i.active && normalizeNomor(i.nomor_wa || '') !== '');
+    for (const f of ROLE_FLAGS) {
+      if (f.key === 'hide_from_customer') continue;
+      if (!aktifBerNomor.some((i) => !!i[f.key])) out.push(`Tidak ada pemegang aktif untuk peran "${f.label}" (${f.hint.toLowerCase()}).`);
+    }
+    const hidden = aktifBerNomor.filter((i) => i.hide_from_customer);
+    if (hidden.length === 0) out.push('Belum ada nomor bertanda "Sembunyikan dari pelanggan". Pastikan PIC internal ditandai agar tidak terlihat pelanggan.');
+    for (const h of hidden) {
+      if (h.pool && h.pool !== 'ALERT') out.push(`${h.display_name} bertanda PIC internal tetapi ada di pool ${h.pool}. Tiket pool itu tetap diteruskan ke nomor ini, namun nomornya tidak ditampilkan ke pelanggan.`);
+    }
+    const nomorSama = new Map<string, string[]>();
+    for (const i of items) {
+      const n = normalizeNomor(i.nomor_wa || '');
+      if (!n) continue;
+      nomorSama.set(n, [...(nomorSama.get(n) || []), i.display_name]);
+    }
+    nomorSama.forEach((names, n) => {
+      if (names.length > 1) out.push(`Nomor ${n} dipakai lebih dari satu baris: ${names.join(', ')}.`);
+    });
+    return out;
+  }, [items]);
+
+  async function movePeran(from: L0Config) {
+    setRowError('');
+    setNotice('');
+    const to = items.find((i) => i.id === moveToId);
+    if (!to || to.id === from.id) {
+      setRowError('Pilih nomor tujuan yang berbeda.');
+      return;
+    }
+    if (!to.active) {
+      setRowError(`${to.display_name} nonaktif. Aktifkan dulu sebelum menerima peran.`);
+      return;
+    }
+    const dipegang = ROLE_FLAGS.filter((f) => !!from[f.key]);
+    if (dipegang.length === 0) {
+      setRowError(`${from.display_name} tidak memegang peran apa pun.`);
+      return;
+    }
+    if (!window.confirm(`Pindahkan ${dipegang.length} peran (${dipegang.map((f) => f.label).join(', ')}) dari ${from.display_name} ke ${to.display_name}?`)) return;
+
+    const now = new Date().toISOString();
+    const gabung: Record<string, unknown> = { updated_at: now };
+    const kosong: Record<string, unknown> = { updated_at: now };
+    for (const f of ROLE_FLAGS) {
+      gabung[f.key] = !!to[f.key] || !!from[f.key];
+      kosong[f.key] = false;
+    }
+    if (from.receives_daily_report || from.receives_system_alert) gabung.report_scope = from.report_scope || 'ALL';
+    // Tujuan diisi dulu, baru asal dikosongkan, supaya tidak ada jeda tanpa pemegang peran.
+    const r1 = await supabase.from('l0_config').update(gabung).eq('id', to.id);
+    if (r1.error) {
+      setRowError('Gagal memindahkan peran (tujuan tidak berubah).');
+      return;
+    }
+    const r2 = await supabase.from('l0_config').update(kosong).eq('id', from.id);
+    if (r2.error) {
+      setRowError(`Peran sudah disalin ke ${to.display_name}, tetapi gagal dikosongkan dari ${from.display_name}. Kosongkan manual.`);
+      load();
+      return;
+    }
+    setMoveFromId(null);
+    setMoveToId('');
+    setNotice(`Peran dipindahkan ke ${to.display_name}. Berlaku mulai proses berikutnya.`);
+    load();
+  }
+
+  async function kirimTes(item: L0Config) {
+    setRowError('');
+    setNotice('');
+    setTestingId(item.id);
+    try {
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      const res = await fetch('/api/pic-test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token ?? ''}` },
+        body: JSON.stringify({ id: item.id }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (res.ok) setNotice(`Pesan tes terkirim ke ${item.display_name}.`);
+      else setRowError(json.error || 'Gagal mengirim pesan tes.');
+    } catch {
+      setRowError('Gagal mengirim pesan tes.');
+    }
+    setTestingId(null);
+  }
+
   return (
     <div className="pl-56">
       <NavHeader nomor={nomor || '1052'} />
@@ -297,6 +393,17 @@ function StaffRoutingContent() {
           Siapa menerima notifikasi bot, dikelompokkan per pool. Data ini dibaca bot pada setiap pesan, jadi perubahan
           berlaku mulai pesan berikutnya, tanpa deploy ulang. Dipakai bersama oleh kedua nomor bot (7484 &amp; 1052).
         </p>
+
+        {peringatan.length > 0 && (
+          <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-800" role="status">
+            <p className="mb-1 font-medium">Perlu dicek ({peringatan.length})</p>
+            <ul className="list-disc space-y-0.5 pl-4">
+              {peringatan.map((w, i) => (
+                <li key={i}>{w}</li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         {/* Form tambah staff baru */}
         <form onSubmit={handleAdd} className="mb-8 rounded-xl border border-gray-200 bg-white p-4">
@@ -503,6 +610,32 @@ function StaffRoutingContent() {
                                     );
                                   })}
                                 </div>
+                                {moveFromId === item.id && (
+                                  <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-gray-600">
+                                    Pindahkan semua peran ke
+                                    <select
+                                      aria-label="Nomor tujuan"
+                                      value={moveToId}
+                                      onChange={(e) => setMoveToId(e.target.value)}
+                                      className="rounded-lg border border-gray-300 px-2 py-1 text-xs text-gray-700"
+                                    >
+                                      <option value="">Pilih nomor...</option>
+                                      {items
+                                        .filter((i) => i.id !== item.id && i.active)
+                                        .map((i) => (
+                                          <option key={i.id} value={i.id}>
+                                            {i.display_name} ({i.nomor_wa})
+                                          </option>
+                                        ))}
+                                    </select>
+                                    <button onClick={() => movePeran(item)} className="rounded-lg bg-gray-900 px-2 py-1 text-xs font-medium text-white hover:bg-gray-800">
+                                      Pindahkan
+                                    </button>
+                                    <button onClick={() => { setMoveFromId(null); setMoveToId(''); }} className="text-xs text-gray-500 hover:text-gray-800">
+                                      Batal
+                                    </button>
+                                  </div>
+                                )}
                                 {(item.receives_daily_report || item.receives_system_alert) && (
                                   <label className="mt-2 flex items-center gap-2 text-xs text-gray-500">
                                     Cakupan laporan
@@ -542,6 +675,19 @@ function StaffRoutingContent() {
                                   <>
                                     <button onClick={() => startEdit(item)} className="text-sm text-gray-500 hover:text-gray-800">
                                       Edit
+                                    </button>
+                                    <button
+                                      onClick={() => { setMoveFromId(moveFromId === item.id ? null : item.id); setMoveToId(''); }}
+                                      className="text-sm text-gray-500 hover:text-gray-800"
+                                    >
+                                      Pindah peran
+                                    </button>
+                                    <button
+                                      onClick={() => kirimTes(item)}
+                                      disabled={testingId === item.id || !item.active}
+                                      className="text-sm text-gray-500 hover:text-gray-800 disabled:opacity-40"
+                                    >
+                                      {testingId === item.id ? 'Mengirim...' : 'Tes WA'}
                                     </button>
                                     <button
                                       onClick={() => toggleActive(item)}

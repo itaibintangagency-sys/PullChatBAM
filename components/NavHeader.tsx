@@ -48,6 +48,7 @@ export function NavHeader({ nomor }: { nomor: Nomor }) {
       items: [
         { href: '/status-bot', label: 'Status Bot' },
         { href: '/internal-numbers', label: 'Nomor internal' },
+        ...(isAdmin ? [{ href: '/aduan', label: 'Aduan' }] : []),
         ...(isAdmin ? [{ href: '/channel', label: 'Channel WA' }] : []),
       ],
     },
