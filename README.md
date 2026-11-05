@@ -81,10 +81,16 @@ Satu baris per nomor staf. Siapa menerima apa ditentukan oleh flag di baris itu,
 | `is_blacklist_reviewer` | Boleh memutuskan CLEARED atau CONFIRMED lewat WhatsApp |
 | `is_resolve_approver` | Menyetujui atau menolak RESOLVE ALL |
 | `is_channel_verifier` | Menerima dan mengirim perintah verifikasi Channel WA (STATUS, TRUE/FALSE, dst.) |
-| `can_control_bot` | Boleh menyalakan dan mematikan bot |
+| `receives_daily_report`, `receives_system_alert`, `report_scope` | Menerima laporan harian chat dan laporan kesehatan workflow, serta cakupannya (ALL, WA1052, WA7484_IG) |
+| `receives_aduan_alert` | Menerima WA setiap tiket aduan, lowongan, atau keperluan lain baru |
+| `hide_from_customer` | Nomor tidak boleh pernah ditampilkan ke pelanggan (PIC internal, pengirim laporan) |
 | `escalation_alias`, `pool`, `urutan`, `active` | Alias tiket, pool routing, urutan, aktif atau tidak |
 
-Flag diubah dari **Pengaturan → Staff & Routing** atau langsung di tabel.
+Flag diubah dari **Pengaturan → Staff & Routing** atau langsung di tabel. Nomor PIC internal (5079) hanya perlu diganti di baris ini; semua workflow membaca penerima dari tabel. Flag lama `can_control_bot` tidak dipakai lagi: bot dinyalakan atau dimatikan hanya lewat halaman **Status Bot** (workflow `WF_BotToggle_v2.0` sengaja dinonaktifkan).
+
+## Aduan, lowongan, dan keperluan lain (nomor 7484)
+
+Menu **Aduan & Keperluan Lain** hanya ada di bot nomor 7484. Bot 1052 dan IG mengarahkan pelanggan ke nomor itu untuk aduan, lowongan, atau permintaan di luar menu. Tiket tersimpan di tabel `aduan_tickets` (maksimal satu tiket terbuka per pelanggan sampai selesai), dikirim ke email sesuai `bot_settings`, dan diberitahukan ke pemegang flag `receives_aduan_alert`. Tiket hanya dibuat lewat fungsi `create_aduan_ticket` (khusus service role). Teks dasar bot ada di tabel `bot_knowledge`, pengaturan email dan SLA di `bot_settings`.
 
 ## Alur RESOLVE ALL
 
@@ -106,6 +112,7 @@ Daftar tabel dan kolom ada di database; ringkasan kelompoknya:
 | Eskalasi | `escalations`, `resolve_requests`, `meta_escalation_routes` |
 | Staf dan routing | `staff_profiles`, `l0_config`, `l0_config_audit`, `routing_pools` |
 | Channel WA | `campaign_links`, `channel_broadcast_log`, `channel_broadcast_control`, `broadcast_verification`, `brand_skip` |
+| Aduan dan teks bot | `aduan_tickets`, `aduan_tickets_audit`, `bot_knowledge`, `bot_settings` |
 | Lainnya | `bot_toggle_logs`, `service_labels`, `public_holidays`, `tiktok_lead_webhook_raw`, `l1_staff`, `review_forms` (lama, tidak dipakai lagi) |
 
 Semua tabel memakai Row Level Security. Perubahan skema dicatat sebagai migrasi Supabase.
