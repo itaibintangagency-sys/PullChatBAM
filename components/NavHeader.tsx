@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/AuthContext';
@@ -20,6 +21,21 @@ export function NavHeader({ nomor }: { nomor: Nomor }) {
   const router = useRouter();
   const { profile, signOut, setNomor } = useAuth();
   const isAdmin = profile?.role === 'admin';
+  const [open, setOpen] = useState(false); // drawer menu di layar kecil
+
+  // Drawer menutup otomatis saat pindah halaman atau tombol Esc ditekan
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setOpen(false);
+  }, [pathname]);
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open]);
 
   const groups: NavGroup[] = [
     {
@@ -89,8 +105,8 @@ export function NavHeader({ nomor }: { nomor: Nomor }) {
     router.push(`/${other}/chats`);
   }
 
-  return (
-    <aside className="fixed left-0 top-0 flex h-screen w-56 flex-col border-r border-gray-200 bg-white">
+  const isi = (
+    <>
       {/* Logo & nomor aktif */}
       <div className="border-b border-gray-100 px-4 py-4">
         <p className="text-sm font-semibold text-gray-900">Kirana Monitor</p>
@@ -141,6 +157,51 @@ export function NavHeader({ nomor }: { nomor: Nomor }) {
           </button>
         </div>
       </div>
-    </aside>
+    </>
+  );
+
+  return (
+    <>
+      {/* Layar lebar: sidebar tetap */}
+      <aside className="fixed left-0 top-0 hidden h-screen w-56 flex-col border-r border-gray-200 bg-white md:flex">{isi}</aside>
+
+      {/* Ponsel: bilah atas dengan tombol hamburger + drawer */}
+      <div className="md:hidden">
+        <header className="fixed inset-x-0 top-0 z-30 flex h-12 items-center gap-3 border-b border-gray-200 bg-white px-3">
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            aria-label="Buka menu"
+            aria-expanded={open}
+            className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-700 hover:bg-gray-100"
+          >
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+              <path d="M3 5h14M3 10h14M3 15h14" />
+            </svg>
+          </button>
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold text-gray-900">Kirana Monitor</p>
+            <p className="truncate text-[11px] leading-none text-gray-500">{NOMOR_LABELS[nomor]}</p>
+          </div>
+        </header>
+
+        {open && (
+          <div className="fixed inset-0 z-40" role="dialog" aria-modal="true" aria-label="Menu">
+            <div className="absolute inset-0 bg-black/40" onClick={() => setOpen(false)} />
+            <aside className="absolute left-0 top-0 flex h-full w-72 max-w-[85%] flex-col bg-white shadow-xl">
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                aria-label="Tutup menu"
+                className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100"
+              >
+                ✕
+              </button>
+              {isi}
+            </aside>
+          </div>
+        )}
+      </div>
+    </>
   );
 }

@@ -77,7 +77,7 @@ function DormantContent({ nomor }: { nomor: Nomor }) {
   const pendingCount = items.filter((i) => i.status === 'PENDING').length;
 
   return (
-    <div className="pl-56">
+    <div className="pt-12 md:pl-56 md:pt-0">
       <NavHeader nomor={nomor} />
       <main className="mx-auto max-w-3xl px-4 py-8">
         <div className="mb-4">

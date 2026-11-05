@@ -101,7 +101,7 @@ function RiwayatContent({ nomor }: { nomor: Nomor }) {
   const tampil = onlyEskalasi ? logs.filter((l) => l.trigger_eskalasi || (l.outcome || '').includes('ESCALAT')) : logs;
 
   return (
-    <div className="pl-56">
+    <div className="pt-12 md:pl-56 md:pt-0">
       <NavHeader nomor={nomor} />
       <main className="mx-auto max-w-3xl px-4 py-8">
         <h1 className="mb-1 text-lg font-medium text-gray-900">Riwayat Customer</h1>

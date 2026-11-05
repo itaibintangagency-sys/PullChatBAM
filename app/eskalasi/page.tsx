@@ -679,16 +679,16 @@ function EskalasiContent() {
     { key: 'RESOLVE', label: 'Selesai', n: counts.RESOLVE },
     { key: 'ALL', label: 'Semua', n: counts.ALL },
   ];
-  const selectCls = 'rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 outline-none focus:border-gray-500';
+  const selectCls = 'w-full min-w-0 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 outline-none focus:border-gray-500 md:w-auto';
   const chipCls = (aktif: boolean) =>
-    `rounded-lg px-3 py-1.5 text-sm ${aktif ? 'bg-gray-900 text-white' : 'border border-gray-300 text-gray-600 hover:bg-gray-50'}`;
+    `shrink-0 whitespace-nowrap rounded-lg px-3 py-1.5 text-sm ${aktif ? 'bg-gray-900 text-white' : 'border border-gray-300 text-gray-600 hover:bg-gray-50'}`;
   const popCls = 'absolute z-20 mt-1 max-h-72 w-64 overflow-auto rounded-lg border border-gray-200 bg-white p-2 shadow-lg';
-  const summaryCls = 'cursor-pointer list-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50';
+  const summaryCls = 'block cursor-pointer list-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50';
 
   return (
-    <div className="pl-56">
+    <div className="pt-12 md:pl-56 md:pt-0">
       <NavHeader nomor={nomor || '1052'} />
-      <main className="mx-auto max-w-7xl px-4 py-6">
+      <main className="mx-auto max-w-7xl px-3 py-4 md:px-4 md:py-6">
         {hapusTarget && (
           <HapusEskalasiDialog
             tiket={{ id: hapusTarget.id, ticket_id: hapusTarget.ticket_id, nama: hapusTarget.nama }}
@@ -823,7 +823,7 @@ function EskalasiContent() {
         {loadedOnce && ringkas.length > 0 && (
           <section aria-label="Ringkasan per penerima" className="mb-4">
             <p className="mb-2 text-xs font-medium text-gray-500">Tiket terbuka per penerima (klik untuk memfilter)</p>
-            <div className="flex flex-wrap gap-2">
+            <div className="-mx-3 flex gap-2 overflow-x-auto px-3 pb-1 md:mx-0 md:flex-wrap md:overflow-visible md:px-0">
               {ringkas.slice(0, 10).map((g) => {
                 const target = g.tokens.length ? g.tokens : [NONE_KEY];
                 const aktif = filter.status === 'OPEN' && samaHimpunan(filter.penerima, target);
@@ -833,7 +833,7 @@ function EskalasiContent() {
                     type="button"
                     onClick={() => (aktif ? patchFilter({ penerima: [] }) : patchFilter({ penerima: target, status: 'OPEN' }))}
                     aria-pressed={aktif}
-                    className={`min-w-[7.5rem] rounded-xl border px-3 py-2 text-left ${
+                    className={`min-w-[7.5rem] shrink-0 rounded-xl border px-3 py-2 text-left ${
                       aktif ? 'border-gray-900 bg-gray-900 text-white' : 'border-gray-200 bg-white hover:bg-gray-50'
                     }`}
                   >
@@ -850,7 +850,7 @@ function EskalasiContent() {
         )}
 
         {/* Filter */}
-        <div className="mb-3 flex flex-wrap items-center gap-2">
+        <div className="-mx-3 mb-3 flex items-center gap-2 overflow-x-auto px-3 pb-1 md:mx-0 md:flex-wrap md:overflow-visible md:px-0 md:pb-0">
           {statusTabs.map((s) => (
             <button key={s.key} type="button" onClick={() => patchFilter({ status: s.key })} aria-pressed={filter.status === s.key} className={chipCls(filter.status === s.key)}>
               {s.label} <span className={filter.status === s.key ? 'text-gray-300' : 'text-gray-400'}>{s.n.toLocaleString('id-ID')}</span>
@@ -881,9 +881,10 @@ function EskalasiContent() {
               setQInput(e.target.value);
               setPage(1);
             }}
-            className="w-64 rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-gray-500"
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-gray-500 md:w-64"
           />
 
+          <div className="grid w-full grid-cols-2 gap-2 md:contents">
           <details ref={penerimaRef} className="relative">
             <summary className={summaryCls}>
               Penerima{filter.penerima.length > 0 ? ` (${filter.penerima.length})` : ''}
@@ -947,6 +948,7 @@ function EskalasiContent() {
               </option>
             ))}
           </select>
+          </div>
 
           {adaFilterAktif(filter) && (
             <button type="button" onClick={resetFilter} className="rounded-lg px-3 py-2 text-sm text-gray-500 hover:text-gray-800">

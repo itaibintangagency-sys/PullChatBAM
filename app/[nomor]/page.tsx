@@ -195,7 +195,7 @@ function DashboardContent({ nomor }: { nomor: Nomor }) {
   }
 
   return (
-    <div className="pl-56">
+    <div className="pt-12 md:pl-56 md:pt-0">
       <NavHeader nomor={nomor} />
       <main className="mx-auto max-w-4xl px-4 py-8">
         <div className="mb-6 flex flex-wrap items-start justify-between gap-3">

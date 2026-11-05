@@ -179,7 +179,7 @@ function AduanContent() {
     `rounded-lg px-3 py-1.5 text-sm ${aktif ? 'bg-gray-900 text-white' : 'border border-gray-300 text-gray-600 hover:bg-gray-50'}`;
 
   return (
-    <div className="pl-56">
+    <div className="pt-12 md:pl-56 md:pt-0">
       <NavHeader nomor={nomor || '1052'} />
       <main className="mx-auto max-w-6xl px-4 py-6">
         <div className="mb-4 flex flex-wrap items-start justify-between gap-3">

@@ -555,7 +555,7 @@ function BotStatusContent() {
     sysSortKey === col ? <span className="ml-1 text-xs">{sysSortDir === 'asc' ? '↑' : '↓'}</span> : null;
 
   return (
-    <div className="pl-56">
+    <div className="pt-12 md:pl-56 md:pt-0">
       <NavHeader nomor={nomor || '1052'} />
       <main className="mx-auto max-w-5xl px-4 py-6">
         <h1 className="mb-1 text-xl font-semibold tracking-tight text-gray-900">Status Bot</h1>

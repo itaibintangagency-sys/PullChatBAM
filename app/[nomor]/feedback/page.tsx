@@ -167,7 +167,7 @@ function FeedbackContent({ nomor }: { nomor: Nomor }) {
     `rounded-lg px-3 py-1.5 text-sm ${aktif ? 'bg-gray-900 text-white' : 'border border-gray-300 text-gray-600 hover:bg-gray-50'}`;
 
   return (
-    <div className="pl-56">
+    <div className="pt-12 md:pl-56 md:pt-0">
       <NavHeader nomor={nomor} />
       <main className="mx-auto max-w-5xl px-4 py-8">
         <h1 className="mb-1 text-lg font-medium text-gray-900">Feedback chatbot</h1>

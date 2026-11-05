@@ -107,7 +107,7 @@ function LegendaContent() {
   const { nomor } = useAuth();
 
   return (
-    <div className="pl-56">
+    <div className="pt-12 md:pl-56 md:pt-0">
       <NavHeader nomor={nomor || '1052'} />
       <main className="mx-auto max-w-3xl px-4 py-8">
         <h1 className="mb-1 text-lg font-medium text-gray-900">Legenda &amp; Panduan</h1>

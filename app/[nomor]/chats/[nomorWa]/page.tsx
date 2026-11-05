@@ -124,9 +124,9 @@ function ChatThreadContent({ nomor, nomorWa }: { nomor: Nomor; nomorWa: string }
   const nama = logs.find((l) => l.nama)?.nama;
 
   return (
-    <div className="pl-56">
+    <div className="pt-12 md:pl-56 md:pt-0">
       <NavHeader nomor={nomor} />
-      <div className="flex h-screen flex-col">
+      <div className="flex h-[calc(100vh-3rem)] flex-col md:h-screen">
         <header className="border-b border-gray-200 bg-white px-4 py-3">
           <div className="mx-auto flex max-w-3xl items-center justify-between">
             <div className="flex items-center gap-3">

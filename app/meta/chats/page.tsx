@@ -98,7 +98,7 @@ function MetaChatListContent() {
   }, [rows, search]);
 
   return (
-    <div className="pl-56">
+    <div className="pt-12 md:pl-56 md:pt-0">
       <NavHeader nomor={nomor || '1052'} />
       <main className="mx-auto max-w-4xl px-4 py-6">
         <div className="mb-4 flex gap-2">

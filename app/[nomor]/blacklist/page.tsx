@@ -223,7 +223,7 @@ function BlacklistContent({ nomor }: { nomor: Nomor }) {
 
   return (
    // SESUDAH — tambah pl-56 di div pembungkus
-<div className="pl-56">
+<div className="pt-12 md:pl-56 md:pt-0">
   <NavHeader nomor={nomor} />
   <main className="mx-auto max-w-4xl px-4 py-6">
     <h1 className="mb-1 text-lg font-medium text-gray-900">Blacklist</h1>
