@@ -36,20 +36,14 @@ const MENU_DOCS: MenuDoc[] = [
   },
   {
     nama: 'Eskalasi',
-    untukSiapa: 'Semua orang',
+    untukSiapa: 'Semua orang (hapus tiket: Super Admin)',
     fungsi:
-      'Daftar tiket yang perlu ditindaklanjuti staff (pendaftaran creator, kerjasama seller, dll). Klik 1 baris buat lihat detail & screenshot, klik "Tandai selesai" kalau sudah beres ditangani.',
+      'Semua tiket eskalasi dari semua bot (WA 1052, WA 7484, IG/FB) dalam satu tabel. Staf biasa langsung melihat tiketnya sendiri; tekan "Reset filter" untuk melihat semua. Bisa diurutkan dengan klik judul kolom, difilter menurut status, penerima, jenis, bot, rentang tanggal, dan umur tiket, serta dicari lewat nama, username, nomor, atau ID tiket. Klik satu baris untuk melihat rincian dan menandai selesai (catatan penyelesaian wajib; staf hanya untuk tiketnya sendiri). Centang beberapa tiket untuk menyelesaikannya sekaligus: Super Admin langsung, staf lewat persetujuan penyetuju. Panel RESOLVE ALL ada di atas tabel. Super Admin juga bisa menghapus tiket, dengan pilihan ikut menghapus histori percakapan (dua kali konfirmasi).',
     istilah: [
-      { label: 'HIGH / MEDIUM / LOW', arti: 'Prioritas — semakin tinggi, semakin perlu didahulukan' },
-      { label: 'Terbuka', arti: 'Belum ditangani' },
-      { label: 'Selesai', arti: 'Sudah ditandai beres oleh staff' },
+      { label: 'Terbuka', arti: 'Belum ditangani (bot WhatsApp)' },
+      { label: 'Menunggu', arti: 'Tiket dari bot IG/FB yang belum ditutup staff' },
+      { label: 'Selesai', arti: 'Sudah ditandai beres' },
     ],
-  },
-  {
-    nama: 'Tabel Eskalasi',
-    untukSiapa: 'Semua orang',
-    fungsi:
-      'Semua tiket eskalasi dari semua bot dalam satu tabel. Bisa diurutkan dengan klik judul kolom (waktu masuk, umur, penerima, status, dll), difilter menurut status, penerima, jenis, bot, rentang tanggal, dan umur tiket, serta dicari lewat nama, nomor, atau ID tiket. Kartu di atas tabel menunjukkan jumlah tiket terbuka per penerima, klik untuk memfilter. Kolom bisa dipilih, dan hasilnya bisa diekspor ke CSV. Untuk menandai tiket selesai, buka halaman Eskalasi bot yang bersangkutan.',
   },
   {
     nama: 'Blacklist',

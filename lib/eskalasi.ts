@@ -5,7 +5,7 @@ export type StatusKey = 'OPEN' | 'PENDING' | 'RESOLVE';
 
 // Kolom yang diambil dari tabel escalations (bukan select('*'): lebih ringan dan tidak membawa kolom yang tak dipakai).
 export const ESKALASI_COLUMNS =
-  'id, ticket_id, created_at, bot_source, nomor_wa, nama, category, sub_category, assigned_to, priority, status, ' +
+  'id, ticket_id, created_at, bot_source, nomor_wa, nama, platform_username, category, sub_category, assigned_to, priority, status, ' +
   'resolved_at, customer_issue, data_notes, previous_assigned, reassigned_at, store_link';
 
 export interface EskalasiRow {
@@ -15,6 +15,7 @@ export interface EskalasiRow {
   bot_source: string | null;
   nomor_wa: string;
   nama: string | null;
+  platform_username: string | null;
   category: string | null;
   sub_category: string | null;
   assigned_to: string | null;
@@ -239,7 +240,7 @@ function matchSearch(row: EskalasiRow, q: string, names: NameMap): boolean {
   if (!s) return true;
   const digits = normNomor(s);
   if (digits.length >= 4 && String(row.nomor_wa || '').includes(digits)) return true;
-  const hay = [row.nama, row.ticket_id, row.nomor_wa, row.assigned_to, penerimaLabel(row.assigned_to, names)]
+  const hay = [row.nama, row.platform_username, row.ticket_id, row.nomor_wa, row.assigned_to, penerimaLabel(row.assigned_to, names)]
     .filter(Boolean)
     .join(' ')
     .toLowerCase();
@@ -312,7 +313,7 @@ export function adaFilterAktif(f: FilterState): boolean {
 
 /* ------------------------------------ sort ------------------------------------ */
 
-export type SortKey = 'masuk' | 'umur' | 'nama' | 'jenis' | 'penerima' | 'status' | 'selesai' | 'bot' | 'prioritas';
+export type SortKey = 'masuk' | 'umur' | 'nama' | 'username' | 'jenis' | 'penerima' | 'status' | 'selesai' | 'bot' | 'prioritas';
 export interface SortSpec {
   key: SortKey | 'default';
   dir: 'asc' | 'desc';
@@ -326,6 +327,7 @@ export const FIRST_DIR: Record<SortKey, 'asc' | 'desc'> = {
   masuk: 'desc',
   umur: 'desc',
   nama: 'asc',
+  username: 'asc',
   jenis: 'asc',
   penerima: 'asc',
   status: 'asc',
@@ -382,6 +384,8 @@ export function sortRows(rows: EskalasiRow[], spec: SortSpec, now: number, names
         );
       case 'nama':
         return cmpText((a.nama || a.nomor_wa || '').toLowerCase(), (b.nama || b.nomor_wa || '').toLowerCase(), dir);
+      case 'username':
+        return cmpText((a.platform_username || '').toLowerCase(), (b.platform_username || '').toLowerCase(), dir);
       case 'jenis':
         return cmpText(jenisLabel(a.category, a.sub_category), jenisLabel(b.category, b.sub_category), dir);
       case 'penerima': {
@@ -451,6 +455,7 @@ export function toCsv(rows: EskalasiRow[], now: number, names: NameMap): string 
     'Masuk (WIB)',
     'Umur atau durasi (jam)',
     'Nama',
+    'Username',
     'Nomor WA',
     'Jenis',
     'Penerima',
@@ -471,6 +476,7 @@ export function toCsv(rows: EskalasiRow[], now: number, names: NameMap): string 
         csvCell(c === null ? '' : wibStamp(c)),
         csvCell(u === null ? '' : (u / 3_600_000).toFixed(1)),
         csvCell(r.nama || ''),
+        csvCell(r.platform_username || ''),
         csvNomor(r.nomor_wa || ''),
         csvCell(jenisLabel(r.category, r.sub_category)),
         csvCell(penerimaLabel(r.assigned_to, names)),
@@ -499,7 +505,7 @@ export interface ViewState {
 
 export const DEFAULT_VIEW: ViewState = { filter: DEFAULT_FILTER, sort: DEFAULT_SORT, page: 1, size: 25 };
 
-const SORT_KEYS: SortKey[] = ['masuk', 'umur', 'nama', 'jenis', 'penerima', 'status', 'selesai', 'bot', 'prioritas'];
+const SORT_KEYS: SortKey[] = ['masuk', 'umur', 'nama', 'username', 'jenis', 'penerima', 'status', 'selesai', 'bot', 'prioritas'];
 const STATUS_VALUES: StatusFilter[] = ['OPEN', 'PENDING', 'RESOLVE', 'ALL'];
 const RENTANG_VALUES: RentangFilter[] = ['ALL', 'TODAY', '7D', '30D', 'CUSTOM'];
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -566,12 +572,13 @@ export function parseQuery(search: string): ViewState {
 
 /* ----------------------------------- kolom ----------------------------------- */
 
-export type ColumnKey = 'masuk' | 'umur' | 'nama' | 'jenis' | 'penerima' | 'status' | 'selesai' | 'bot' | 'prioritas' | 'tiket';
+export type ColumnKey = 'masuk' | 'umur' | 'nama' | 'username' | 'jenis' | 'penerima' | 'status' | 'selesai' | 'bot' | 'prioritas' | 'tiket';
 
 export const COLUMN_DEFS: { key: ColumnKey; label: string; sortKey: SortKey | null; defaultOn: boolean }[] = [
   { key: 'masuk', label: 'Masuk', sortKey: 'masuk', defaultOn: true },
   { key: 'umur', label: 'Umur / durasi', sortKey: 'umur', defaultOn: true },
   { key: 'nama', label: 'Customer', sortKey: 'nama', defaultOn: true },
+  { key: 'username', label: 'Username', sortKey: 'username', defaultOn: true },
   { key: 'jenis', label: 'Jenis', sortKey: 'jenis', defaultOn: true },
   { key: 'penerima', label: 'Penerima', sortKey: 'penerima', defaultOn: true },
   { key: 'status', label: 'Status', sortKey: 'status', defaultOn: true },

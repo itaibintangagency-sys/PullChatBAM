@@ -16,8 +16,7 @@ Stack: Next.js 16 (App Router), React 19, Tailwind 4, Supabase (Auth, Postgres, 
 - Status Bot: tabel semua workflow n8n yang terhubung dengan status aktif/nonaktif langsung dari n8n; klik baris untuk melihat riwayat ON/OFF workflow itu. Super Admin bisa menyalakan atau mematikan workflow dari tabel (jaring pengaman dan sub-workflow terkunci); tiap aksi tercatat di `bot_toggle_logs`
 
 **Tiket eskalasi**
-- Halaman Eskalasi per bot: urutkan menurut prioritas, waktu masuk, nama, staf, atau status; tandai selesai satu per satu
-- Tabel Eskalasi (`/eskalasi`): semua bot, filter dan ekspor CSV
+- Eskalasi (`/eskalasi`): semua bot (WA 1052, WA 7484, IG/FB) dalam satu tabel dengan kolom Customer dan Username, filter, ekspor CSV, tandai selesai (satuan atau checklist), panel RESOLVE ALL, dan hapus tiket (Super Admin). Staf biasa memulai dengan filter tiketnya sendiri
 - **RESOLVE ALL**: staf (atau admin atas nama staf) mengajukan resolve semua tiket OPEN. Tiket baru berubah RESOLVE setelah disetujui penyetuju, dengan batas waktu 24 jam. Bisa diajukan dari web atau WhatsApp (lihat bagian di bawah)
 
 **Blacklist**

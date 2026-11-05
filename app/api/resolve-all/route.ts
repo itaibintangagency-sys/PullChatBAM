@@ -89,6 +89,7 @@ export async function POST(request: NextRequest) {
     bot_source?: string;
     alias?: string;
     note?: string;
+    ticket_ids?: string[];
     request_id?: string;
     approve?: boolean;
   };
@@ -112,6 +113,13 @@ export async function POST(request: NextRequest) {
       );
     }
     const note = String(body.note || '').trim().slice(0, 300);
+    let ticketIds: string[] | null = null;
+    if (Array.isArray(body.ticket_ids)) {
+      ticketIds = body.ticket_ids.map(String);
+      if (ticketIds.length === 0 || ticketIds.length > 500 || ticketIds.some((i) => !/^[0-9a-f-]{36}$/i.test(i))) {
+        return NextResponse.json({ error: 'Daftar tiket tidak valid' }, { status: 400 });
+      }
+    }
 
     const { data, error } = await caller.admin.rpc('create_resolve_request', {
       p_bot_source: botSource,
@@ -119,6 +127,8 @@ export async function POST(request: NextRequest) {
       p_requested_by_nomor: null,
       p_via: 'WEB',
       p_resolution_text: note || null,
+      // Checklist: hanya tiket terpilih (tetap disaring fungsi database: OPEN dan milik alias itu)
+      p_ticket_ids: ticketIds,
     });
     if (error) {
       const d = describeRpcError(error.message || '');

@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { RequireNomor } from '@/components/RouteGuard';
 import { NavHeader } from '@/components/NavHeader';
 import { useAuth } from '@/lib/AuthContext';
-import { ResolveAllPanel } from '@/components/ResolveAllPanel';
 import { supabase } from '@/lib/supabase';
 import { Nomor } from '@/lib/types';
 import { SkeletonCard } from '@/components/Skeleton';
@@ -228,19 +227,19 @@ function DashboardContent({ nomor }: { nomor: Nomor }) {
             {/* Kartu utama */}
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
               <CountCard
-                href={`/${nomor}/escalations`}
+                href={`/eskalasi?status=ALL&bot=${nomor}`}
                 label={isAdmin ? 'Total eskalasi' : 'Total tiket kamu'}
                 value={isAdmin ? counts.escalationsTotal : myCounts.total}
                 tone="border-indigo-200 bg-indigo-50 text-indigo-800"
               />
               <CountCard
-                href={`/${nomor}/escalations`}
+                href={`/eskalasi?status=OPEN&bot=${nomor}`}
                 label={isAdmin ? 'Eskalasi terbuka' : 'Tiket kamu terbuka'}
                 value={isAdmin ? counts.escalationsOpen : myCounts.open}
                 tone="border-red-200 bg-red-50 text-red-800"
               />
               <CountCard
-                href={`/${nomor}/escalations`}
+                href={`/eskalasi?status=RESOLVE&bot=${nomor}`}
                 label={isAdmin ? 'Sudah resolve' : 'Tiket kamu sudah resolve'}
                 value={isAdmin ? counts.escalationsResolved : myCounts.resolved}
                 tone="border-green-200 bg-green-50 text-green-800"
@@ -300,8 +299,6 @@ function DashboardContent({ nomor }: { nomor: Nomor }) {
                 )}
               </div>
             )}
-
-            {isAdmin && <ResolveAllPanel nomor={nomor} onChanged={() => void load()} />}
 
             {/* 2 kolom breakdown -- tetap tampil buat semua role, ini
                 gambaran umum sistem, bukan data personal per-staff */}

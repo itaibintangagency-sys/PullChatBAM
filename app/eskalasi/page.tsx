@@ -2,11 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import Link from 'next/link';
 import { RequireAuth } from '@/components/RouteGuard';
 import { NavHeader } from '@/components/NavHeader';
 import { RefreshBar } from '@/components/RefreshBar';
 import { HapusEskalasiDialog } from '@/components/HapusEskalasiDialog';
+import { ResolveAllPanel } from '@/components/ResolveAllPanel';
 import { SkeletonRow } from '@/components/Skeleton';
 import { useAuth } from '@/lib/AuthContext';
 import { useAutoRefresh } from '@/lib/useAutoRefresh';
@@ -64,7 +64,7 @@ const FETCH_PAGE = 1000; // batas baris per permintaan di API Supabase
 const OPEN_CAP = 20_000; // pengaman: tiket belum selesai selalu dimuat penuh
 const RESOLVED_CAP = 4_000; // tiket selesai: yang terbaru saja
 const REFRESH_SEC = 30;
-const COLS_KEY = 'kirana_eskalasi_cols';
+const COLS_KEY = 'kirana_eskalasi_cols_v2'; // v2: kolom Username ditambahkan
 const DAY_MS = 86_400_000;
 
 interface PageResult {
@@ -162,7 +162,7 @@ function samaHimpunan(a: string[], b: string[]) {
 /* ----------------------------------- halaman ----------------------------------- */
 
 function EskalasiContent() {
-  const { nomor, profile } = useAuth();
+  const { nomor, profile, session } = useAuth();
   const myAlias = (profile?.escalation_alias || '').toUpperCase();
 
   const [rows, setRows] = useState<EskalasiRow[]>([]);
@@ -196,6 +196,19 @@ function EskalasiContent() {
   const isSuperAdmin = profile?.role === 'admin';
   const [hapusTarget, setHapusTarget] = useState<EskalasiRow | null>(null);
   const [hapusNotice, setHapusNotice] = useState('');
+
+  // Penyelesaian tiket: satuan (di rincian), checklist (Super Admin langsung, staf lewat persetujuan), RESOLVE ALL (panel)
+  const [selected, setSelected] = useState<Set<string>>(() => new Set());
+  const [resolveTarget, setResolveTarget] = useState<string | null>(null);
+  const [resolveNote, setResolveNote] = useState('');
+  const [bulkNote, setBulkNote] = useState('');
+  const [aksiBusy, setAksiBusy] = useState(false);
+  const [aksiMsg, setAksiMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [resolveAllBot, setResolveAllBot] = useState<'1052' | '7484'>('1052');
+  const defaultMineApplied = useRef(false);
+
+  const canResolveRow = (r: EskalasiRow) =>
+    statusOf(r) !== 'RESOLVE' && (isSuperAdmin || (!!myAlias && aliasTokens(r.assigned_to).map((t) => t.toUpperCase()).includes(myAlias)));
 
   const penerimaRef = useRef<HTMLDetailsElement>(null);
   const kolomRef = useRef<HTMLDetailsElement>(null);
@@ -278,12 +291,132 @@ function EskalasiContent() {
   const pageRows = sorted.slice(startIdx, startIdx + size);
   const visibleCols = COLUMN_DEFS.filter((c) => columns.includes(c.key));
 
+  // Staf biasa (punya alias) langsung melihat tiketnya sendiri; tombol "Reset filter" menampilkan semua.
+  useEffect(() => {
+    if (defaultMineApplied.current || !profile) return;
+    defaultMineApplied.current = true;
+    if (profile.role !== 'admin' && myAlias && awal.filter.penerima.length === 0) {
+      setFilter((f) => ({ ...f, penerima: [myAlias] }));
+    }
+  }, [profile, myAlias, awal]);
+
+  const bisaDipilih = useMemo(() => sorted.filter(canResolveRow), [sorted, isSuperAdmin, myAlias]); // eslint-disable-line react-hooks/exhaustive-deps
+  const pilihanHalaman = pageRows.filter(canResolveRow);
+  const semuaHalamanTerpilih = pilihanHalaman.length > 0 && pilihanHalaman.every((r) => selected.has(r.id));
+
+  async function tokenAkses() {
+    const { data } = await supabase.auth.getSession();
+    return data.session?.access_token ?? session?.access_token ?? '';
+  }
+
+  function toggleDipilih(id: string) {
+    setSelected((s) => {
+      const n = new Set(s);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
+  }
+
+  function togglePilihHalaman() {
+    setSelected((s) => {
+      const n = new Set(s);
+      if (semuaHalamanTerpilih) pilihanHalaman.forEach((r) => n.delete(r.id));
+      else pilihanHalaman.forEach((r) => n.add(r.id));
+      return n;
+    });
+  }
+
+  async function resolveLangsung(ids: string[], catatan: string) {
+    if (!catatan.trim()) {
+      setAksiMsg({ ok: false, text: 'Isi catatan penyelesaian dulu.' });
+      return false;
+    }
+    setAksiBusy(true);
+    setAksiMsg(null);
+    try {
+      const res = await fetch('/api/eskalasi-resolve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await tokenAkses()}` },
+        body: JSON.stringify({ ids, catatan }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setAksiMsg({ ok: false, text: j.error || 'Gagal menyelesaikan tiket.' });
+        return false;
+      }
+      setAksiMsg({
+        ok: true,
+        text: `${j.selesai} tiket ditandai selesai${j.dilewati ? `, ${j.dilewati} dilewati (sudah selesai atau bukan milikmu)` : ''}.`,
+      });
+      await refreshNow();
+      return true;
+    } catch {
+      setAksiMsg({ ok: false, text: 'Gagal menghubungi server.' });
+      return false;
+    } finally {
+      setAksiBusy(false);
+    }
+  }
+
+  async function resolveSatuan(r: EskalasiRow) {
+    if (await resolveLangsung([r.id], resolveNote)) {
+      setResolveTarget(null);
+      setResolveNote('');
+    }
+  }
+
+  async function resolveTerpilih() {
+    const ids = Array.from(selected);
+    if (!window.confirm(`Tandai ${ids.length} tiket sebagai selesai? Catatan yang sama dipakai untuk semuanya.`)) return;
+    if (await resolveLangsung(ids, bulkNote)) {
+      setSelected(new Set());
+      setBulkNote('');
+    }
+  }
+
+  // Staf: penyelesaian massal lewat persetujuan (sama seperti RESOLVE ALL), hanya tiket OPEN bot 1052/7484 miliknya.
+  async function ajukanTerpilih() {
+    const dipilih = rows.filter((r) => selected.has(r.id));
+    const bots = Array.from(new Set(dipilih.map((r) => r.bot_source || '')));
+    if (bots.length !== 1 || (bots[0] !== '1052' && bots[0] !== '7484')) {
+      setAksiMsg({ ok: false, text: 'Pengajuan hanya untuk tiket satu bot WhatsApp (1052 atau 7484). Filter bot dulu, lalu pilih ulang.' });
+      return;
+    }
+    if (!window.confirm(`Ajukan penyelesaian ${dipilih.length} tiket terpilih? Tiket baru selesai setelah disetujui penyetuju.`)) return;
+    setAksiBusy(true);
+    setAksiMsg(null);
+    try {
+      const res = await fetch('/api/resolve-all', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await tokenAkses()}` },
+        body: JSON.stringify({ action: 'create', bot_source: bots[0], ticket_ids: dipilih.map((r) => r.id), note: bulkNote }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setAksiMsg({ ok: false, text: j.error || 'Gagal mengajukan.' });
+        return;
+      }
+      setAksiMsg({
+        ok: true,
+        text: `Permintaan diajukan (${j.ticket_count} tiket OPEN milikmu). ${j.notified ? 'Penyetuju sudah diberi tahu lewat WhatsApp.' : 'Pemberitahuan WhatsApp gagal terkirim; minta penyetuju cek di panel RESOLVE ALL.'}`,
+      });
+      setSelected(new Set());
+      setBulkNote('');
+    } catch {
+      setAksiMsg({ ok: false, text: 'Gagal menghubungi server.' });
+    } finally {
+      setAksiBusy(false);
+    }
+  }
+
   /* --------------------------------- aksi --------------------------------- */
 
   function patchFilter(p: Partial<FilterState>) {
     setFilter((f) => ({ ...f, ...p }));
     setPage(1);
     setExpandedId(null);
+    setSelected(new Set());
   }
 
   function resetFilter() {
@@ -291,6 +424,7 @@ function EskalasiContent() {
     setQInput('');
     setPage(1);
     setExpandedId(null);
+    setSelected(new Set());
   }
 
   function toggleSort(key: SortKey) {
@@ -360,6 +494,12 @@ function EskalasiContent() {
             {r.nama && <span className="block text-xs text-gray-400">{r.nomor_wa}</span>}
           </>
         );
+      case 'username':
+        return r.platform_username ? (
+          <span className="text-gray-800">{/^\d+$/.test(r.platform_username) ? r.platform_username : '@' + r.platform_username}</span>
+        ) : (
+          <span className="text-gray-400">–</span>
+        );
       case 'jenis':
         return <span className="text-gray-700">{jenisLabel(r.category, r.sub_category)}</span>;
       case 'penerima': {
@@ -402,7 +542,6 @@ function EskalasiContent() {
     const rs = toMs(r.resolved_at);
     const catatan = r.customer_issue || r.data_notes;
     const waOk = /^\d{8,15}$/.test(r.nomor_wa || '');
-    const bisaResolve = st !== 'RESOLVE' && (r.bot_source === '1052' || r.bot_source === '7484');
     return (
       <dl className="grid grid-cols-1 gap-x-6 gap-y-2 text-sm sm:grid-cols-2 lg:grid-cols-3">
         <div>
@@ -466,14 +605,51 @@ function EskalasiContent() {
           </div>
         )}
         <div className="sm:col-span-2 lg:col-span-3">
-          {bisaResolve ? (
-            <Link href={`/${r.bot_source}/escalations`} className="text-sm text-blue-600 hover:underline">
-              Buka di halaman Eskalasi {r.bot_source} untuk menandai selesai
-            </Link>
+          {canResolveRow(r) ? (
+            resolveTarget === r.id ? (
+              <div className="space-y-2" onClick={(e) => e.stopPropagation()}>
+                <textarea
+                  rows={2}
+                  value={resolveNote}
+                  onChange={(e) => setResolveNote(e.target.value)}
+                  maxLength={500}
+                  placeholder="Catatan penyelesaian (wajib)"
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                />
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    disabled={aksiBusy}
+                    onClick={() => void resolveSatuan(r)}
+                    className="rounded-lg bg-green-600 px-3 py-1.5 text-sm text-white hover:bg-green-700 disabled:opacity-50"
+                  >
+                    {aksiBusy ? 'Menyimpan...' : 'Simpan & tandai selesai'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setResolveTarget(null)}
+                    className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
+                  >
+                    Batal
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setAksiMsg(null);
+                  setResolveNote('');
+                  setResolveTarget(r.id);
+                }}
+                className="rounded-lg border border-green-300 px-3 py-1.5 text-sm text-green-700 hover:bg-green-50"
+              >
+                Tandai selesai
+              </button>
+            )
           ) : st !== 'RESOLVE' ? (
-            <span className="text-xs text-gray-400">
-              Tiket ini berasal dari bot yang tidak punya halaman Eskalasi sendiri, jadi belum bisa ditandai selesai dari Monitor.
-            </span>
+            <span className="text-xs text-gray-400">Tiket ini bukan milikmu, jadi hanya Super Admin yang bisa menyelesaikannya.</span>
           ) : null}
         </div>
         {isSuperAdmin && (
@@ -532,7 +708,7 @@ function EskalasiContent() {
         )}
         <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h1 className="text-lg font-medium text-gray-900">Tabel Eskalasi</h1>
+            <h1 className="text-lg font-medium text-gray-900">Eskalasi</h1>
             <p className="text-sm text-gray-500">
               {loadedOnce
                 ? `${sorted.length.toLocaleString('id-ID')} tiket sesuai filter · ${belumSelesai.toLocaleString('id-ID')} belum selesai · semua bot`
@@ -553,6 +729,82 @@ function EskalasiContent() {
         {failed && !loadedOnce && (
           <div className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
             Gagal memuat tiket. Coba tekan Refresh, atau muat ulang halaman.
+          </div>
+        )}
+        {aksiMsg && (
+          <div
+            className={`mb-4 rounded-lg px-3 py-2 text-sm ${aksiMsg.ok ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}
+            role="status"
+          >
+            {aksiMsg.text}
+          </div>
+        )}
+
+        {/* RESOLVE ALL (perlu persetujuan) */}
+        <details className="mb-4 rounded-xl border border-gray-200 bg-white">
+          <summary className="cursor-pointer list-none px-4 py-3 text-sm font-medium text-gray-900">
+            RESOLVE ALL (perlu persetujuan) <span className="text-xs font-normal text-gray-400">· klik untuk membuka</span>
+          </summary>
+          <div className="px-4 pb-4">
+            <label className="mb-3 flex items-center gap-2 text-sm text-gray-600">
+              Bot
+              <select
+                value={resolveAllBot}
+                onChange={(e) => setResolveAllBot(e.target.value as '1052' | '7484')}
+                className="rounded-lg border border-gray-300 px-2 py-1 text-sm text-gray-700"
+              >
+                <option value="1052">WA 1052</option>
+                <option value="7484">WA 7484</option>
+              </select>
+              <span className="text-xs text-gray-400">Hanya tiket berstatus Terbuka. Tiket IG/FB diselesaikan lewat checklist.</span>
+            </label>
+            <ResolveAllPanel key={resolveAllBot} nomor={resolveAllBot} onChanged={() => void refreshNow()} />
+          </div>
+        </details>
+
+        {/* Bilah checklist */}
+        {selected.size > 0 && (
+          <div className="sticky top-2 z-10 mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-3 shadow-sm">
+            <span className="text-sm font-medium text-gray-900">{selected.size} tiket dipilih</span>
+            {bisaDipilih.length > selected.size && (
+              <button
+                type="button"
+                onClick={() => setSelected(new Set(bisaDipilih.slice(0, 500).map((r) => r.id)))}
+                className="text-sm text-blue-600 hover:underline"
+              >
+                Pilih semua {Math.min(bisaDipilih.length, 500).toLocaleString('id-ID')} sesuai filter
+              </button>
+            )}
+            <button type="button" onClick={() => setSelected(new Set())} className="text-sm text-gray-500 hover:text-gray-800">
+              Kosongkan
+            </button>
+            <input
+              value={bulkNote}
+              onChange={(e) => setBulkNote(e.target.value)}
+              maxLength={300}
+              placeholder={isSuperAdmin ? 'Catatan penyelesaian (wajib)' : 'Catatan (opsional)'}
+              className="min-w-48 flex-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm"
+            />
+            {isSuperAdmin ? (
+              <button
+                type="button"
+                disabled={aksiBusy}
+                onClick={() => void resolveTerpilih()}
+                className="rounded-lg bg-green-600 px-3 py-1.5 text-sm text-white hover:bg-green-700 disabled:opacity-50"
+              >
+                {aksiBusy ? 'Memproses...' : 'Tandai selesai terpilih'}
+              </button>
+            ) : (
+              <button
+                type="button"
+                disabled={aksiBusy}
+                onClick={() => void ajukanTerpilih()}
+                className="rounded-lg bg-gray-900 px-3 py-1.5 text-sm text-white hover:bg-gray-800 disabled:opacity-50"
+                title="Penyelesaian massal oleh staf perlu persetujuan penyetuju"
+              >
+                {aksiBusy ? 'Memproses...' : 'Ajukan penyelesaian terpilih'}
+              </button>
+            )}
           </div>
         )}
         {namesFailed && (
@@ -753,6 +1005,15 @@ function EskalasiContent() {
               <table className="w-full min-w-[880px] text-left text-sm">
                 <thead className="border-b border-gray-200 bg-gray-50 text-xs text-gray-500">
                   <tr>
+                    <th scope="col" className="w-8 px-3 py-2">
+                      <input
+                        type="checkbox"
+                        aria-label="Pilih semua tiket di halaman ini"
+                        checked={semuaHalamanTerpilih}
+                        disabled={pilihanHalaman.length === 0}
+                        onChange={togglePilihHalaman}
+                      />
+                    </th>
                     {visibleCols.map((c) => (
                       <th key={c.key} scope="col" aria-sort={ariaSort(c.sortKey)} className="whitespace-nowrap px-3 py-2 font-medium">
                         {c.sortKey ? (
@@ -785,6 +1046,16 @@ function EskalasiContent() {
                           onClick={() => setExpandedId(expanded ? null : r.id)}
                           className={`cursor-pointer align-top hover:bg-gray-50 ${expanded ? 'bg-gray-50' : ''}`}
                         >
+                          <td className="w-8 px-3 py-2.5" onClick={(e) => e.stopPropagation()}>
+                            {canResolveRow(r) && (
+                              <input
+                                type="checkbox"
+                                aria-label={`Pilih tiket ${r.ticket_id}`}
+                                checked={selected.has(r.id)}
+                                onChange={() => toggleDipilih(r.id)}
+                              />
+                            )}
+                          </td>
                           {visibleCols.map((c) => (
                             <td key={c.key} className="px-3 py-2.5">
                               {renderCell(r, c.key)}
@@ -807,7 +1078,7 @@ function EskalasiContent() {
                         </tr>
                         {expanded && (
                           <tr className="bg-gray-50">
-                            <td colSpan={visibleCols.length + 1} className="px-4 pb-4 pt-1">
+                            <td colSpan={visibleCols.length + 2} className="px-4 pb-4 pt-1">
                               {renderDetail(r)}
                             </td>
                           </tr>
