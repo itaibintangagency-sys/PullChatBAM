@@ -18,11 +18,12 @@ export interface BrandQueueItem {
   siaran_terkirim: number; // jumlah SIARAN di log yang memuat brand ini
   terakhir_siaran: string | null;
   komisi_mcn_terbaik: number | string | null;
+  komisi_affiliate_terbaik?: number | string | null; // komisi affiliate tertinggi di antara link yang layak kirim
   dilewati: boolean;
   dalam_jeda_toko: boolean; // brand ada di 3 siaran terakhir
 }
 
-type SortKey = 'urutan' | 'nama_toko' | 'link_layak' | 'komisi' | 'siaran' | 'status';
+type SortKey = 'urutan' | 'nama_toko' | 'link_layak' | 'komisi' | 'affiliate' | 'siaran' | 'status';
 type SortDir = 'asc' | 'desc';
 
 const PAGE_SIZE = 10;
@@ -34,6 +35,7 @@ const DEFAULT_DIR: Record<SortKey, SortDir> = {
   status: 'asc',
   link_layak: 'desc',
   komisi: 'desc',
+  affiliate: 'desc',
   siaran: 'desc',
 };
 
@@ -42,6 +44,12 @@ const STATUS_RANK: Record<BrandStatus, number> = { BERIKUTNYA: 0, JEDA: 1, ANTRE
 function komisiNum(b: BrandQueueItem): number | null {
   if (b.komisi_mcn_terbaik === null || b.komisi_mcn_terbaik === undefined) return null;
   const n = Number(b.komisi_mcn_terbaik);
+  return Number.isNaN(n) ? null : n;
+}
+
+function affiliateNum(b: BrandQueueItem): number | null {
+  if (b.komisi_affiliate_terbaik === null || b.komisi_affiliate_terbaik === undefined) return null;
+  const n = Number(b.komisi_affiliate_terbaik);
   return Number.isNaN(n) ? null : n;
 }
 
@@ -103,6 +111,9 @@ export function BrandQueueTable({ rows, onLewati, onBatalkan, busyBrand = null }
           break;
         case 'komisi':
           cmp = (komisiNum(a) ?? -1) - (komisiNum(b) ?? -1);
+          break;
+        case 'affiliate':
+          cmp = (affiliateNum(a) ?? -1) - (affiliateNum(b) ?? -1);
           break;
         case 'siaran':
           cmp = a.siaran_terkirim - b.siaran_terkirim;
@@ -188,12 +199,14 @@ export function BrandQueueTable({ rows, onLewati, onBatalkan, busyBrand = null }
                   </th>
                   {th('siaran', 'Siaran', 'right', 'Berapa kali brand ini tampil di siaran Channel (dari histori)')}
                   {th('komisi', 'Komisi MCN', 'right', 'Komisi MCN tertinggi di antara link yang layak kirim')}
+                  {th('affiliate', 'Komisi Affiliate', 'right', 'Komisi affiliate tertinggi di antara link yang layak kirim. Brand dengan angka tertinggi tayang paling dulu')}
                   {th('status', 'Status', 'left')}
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {pageRows.map((b) => {
                   const komisi = komisiNum(b);
+                  const affiliate = affiliateNum(b);
                   const terakhir = tanggalPendek(b.terakhir_siaran);
                   return (
                     <tr key={b.nama_toko} className={b.status === 'BERIKUTNYA' ? 'bg-sky-50' : 'hover:bg-gray-50'}>
@@ -230,6 +243,9 @@ export function BrandQueueTable({ rows, onLewati, onBatalkan, busyBrand = null }
                       </td>
                       <td className="whitespace-nowrap px-2 py-1.5 text-right text-gray-700">
                         {komisi === null ? '–' : `${komisi}%`}
+                      </td>
+                      <td className="whitespace-nowrap px-2 py-1.5 text-right font-medium text-gray-900">
+                        {affiliate === null ? '–' : `${affiliate}%`}
                       </td>
                       <td className="px-2 py-1.5">
                         {b.status === 'BERIKUTNYA' && (
@@ -314,9 +330,10 @@ export function BrandQueueTable({ rows, onLewati, onBatalkan, busyBrand = null }
           </div>
 
           <p className="border-t border-gray-100 px-3 py-2 text-[10px] text-gray-400">
-            Antrean mengikuti aturan seleksi siaran di database (fungsi broadcast_candidates): jeda 30 hari per produk,
-            minimal 2 dari 3 syarat (kadaluarsa &gt; 3 bulan, komisi MCN &gt; 4%, komisi affiliate &gt; 10%), dan brand yang
-            ada di 3 siaran terakhir ditandai Jeda sehingga giliran berputar antar brand. Biru = tayang berikutnya.
+            Antrean diurutkan dari komisi affiliate tertinggi: brand yang punya link dengan affiliate paling besar tayang
+            paling dulu. Syarat link: jeda 30 hari per produk dan minimal 2 dari 3 syarat (kadaluarsa &gt; 3 bulan, komisi
+            MCN &gt; 4%, komisi affiliate &gt; 10%). Brand yang ada di 3 siaran terakhir ditandai Jeda agar giliran berputar
+            antar brand. Biru = tayang berikutnya.
             Kolom Siaran dihitung dari histori siaran, bukan dari jumlah produk.
           </p>
         </>
