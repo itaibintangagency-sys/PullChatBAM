@@ -9,6 +9,8 @@ import { Nomor, NOMOR_LABELS, InternalNumber } from '@/lib/types';
 import { formatDistanceToNow } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 
+const PAGE_SIZE = 50;
+
 interface ChatSummaryRow {
   nomor_wa: string;
   nama: string | null;
@@ -21,6 +23,7 @@ function ChatListContent({ nomor }: { nomor: Nomor }) {
   const [internalNumbers, setInternalNumbers] = useState<InternalNumber[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(0);
 
   const sessionLabel = NOMOR_LABELS[nomor];
 
@@ -46,21 +49,29 @@ function ChatListContent({ nomor }: { nomor: Nomor }) {
   async function loadData() {
     // Jalur utama: view chat_list_summary (satu baris per kontak, dihitung di database) supaya satu
     // nomor yang spam tidak menghabiskan batas baris dan menyembunyikan kontak lain.
-    const sum = await supabase
-      .from('chat_list_summary')
-      .select('nomor_wa, nama, message_text, last_timestamp')
-      .eq('session', sessionLabel)
-      .order('last_timestamp', { ascending: false })
-      .limit(1000);
-    if (!sum.error && sum.data) {
-      setRows(
-        sum.data.map((r) => ({
+    // Server membatasi 1000 baris per permintaan, jadi diambil bertahap sampai habis.
+    const all: ChatSummaryRow[] = [];
+    let viewOk = true;
+    for (let from = 0; from < 20000; from += 1000) {
+      const sum = await supabase
+        .from('chat_list_summary')
+        .select('nomor_wa, nama, message_text, last_timestamp')
+        .eq('session', sessionLabel)
+        .order('last_timestamp', { ascending: false })
+        .range(from, from + 999);
+      if (sum.error || !sum.data) { viewOk = false; break; }
+      for (const r of sum.data) {
+        all.push({
           nomor_wa: r.nomor_wa as string,
           nama: (r.nama as string | null) ?? null,
           last_message: (r.message_text as string | null) || '[media]',
           last_timestamp: r.last_timestamp as string,
-        }))
-      );
+        });
+      }
+      if (sum.data.length < 1000) break;
+    }
+    if (viewOk) {
+      setRows(all);
       setLoading(false);
       return;
     }
@@ -113,8 +124,11 @@ function ChatListContent({ nomor }: { nomor: Nomor }) {
     return list;
   }, [rows, search]);
 
-  const customerList = filtered.filter((r) => !internalSet.has(r.nomor_wa));
+  const customerAll = filtered.filter((r) => !internalSet.has(r.nomor_wa));
   const internalList = filtered.filter((r) => internalSet.has(r.nomor_wa));
+  const totalPages = Math.max(1, Math.ceil(customerAll.length / PAGE_SIZE));
+  const curPage = Math.min(page, totalPages - 1);
+  const customerList = customerAll.slice(curPage * PAGE_SIZE, (curPage + 1) * PAGE_SIZE);
 
   return (
 // SESUDAH — tambah pl-56 di div pembungkus
@@ -126,7 +140,7 @@ function ChatListContent({ nomor }: { nomor: Nomor }) {
             type="text"
             placeholder="Cari nomor atau nama..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => { setSearch(e.target.value); setPage(0); }}
             className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-gray-500"
           />
         </div>
@@ -136,6 +150,29 @@ function ChatListContent({ nomor }: { nomor: Nomor }) {
         ) : (
           <>
             <Section title="Customer" items={customerList} nomor={nomor} internal={internalNumbers} empty="Belum ada percakapan customer." />
+            {customerAll.length > PAGE_SIZE && (
+              <div className="mb-6 flex items-center justify-between text-sm text-gray-600">
+                <button
+                  type="button"
+                  disabled={curPage === 0}
+                  onClick={() => setPage(curPage - 1)}
+                  className="rounded-lg border border-gray-300 px-3 py-1.5 disabled:opacity-40"
+                >
+                  ← Sebelumnya
+                </button>
+                <span>
+                  {curPage * PAGE_SIZE + 1}–{Math.min((curPage + 1) * PAGE_SIZE, customerAll.length)} dari {customerAll.length} · halaman {curPage + 1}/{totalPages}
+                </span>
+                <button
+                  type="button"
+                  disabled={curPage >= totalPages - 1}
+                  onClick={() => setPage(curPage + 1)}
+                  className="rounded-lg border border-gray-300 px-3 py-1.5 disabled:opacity-40"
+                >
+                  Berikutnya →
+                </button>
+              </div>
+            )}
             {internalList.length > 0 && (
               <Section title="Internal" items={internalList} nomor={nomor} internal={internalNumbers} empty="" />
             )}
