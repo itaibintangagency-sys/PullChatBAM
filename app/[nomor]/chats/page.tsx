@@ -44,6 +44,28 @@ function ChatListContent({ nomor }: { nomor: Nomor }) {
   }, [nomor]);
 
   async function loadData() {
+    // Jalur utama: view chat_list_summary (satu baris per kontak, dihitung di database) supaya satu
+    // nomor yang spam tidak menghabiskan batas baris dan menyembunyikan kontak lain.
+    const sum = await supabase
+      .from('chat_list_summary')
+      .select('nomor_wa, nama, message_text, last_timestamp')
+      .eq('session', sessionLabel)
+      .order('last_timestamp', { ascending: false })
+      .limit(1000);
+    if (!sum.error && sum.data) {
+      setRows(
+        sum.data.map((r) => ({
+          nomor_wa: r.nomor_wa as string,
+          nama: (r.nama as string | null) ?? null,
+          last_message: (r.message_text as string | null) || '[media]',
+          last_timestamp: r.last_timestamp as string,
+        }))
+      );
+      setLoading(false);
+      return;
+    }
+
+    // Cadangan bila view belum ada: cara lama (hanya melihat baris terbaru).
     const { data, error } = await supabase
       .from('chat_logs')
       .select('nomor_wa, nama, message_text, timestamp')
