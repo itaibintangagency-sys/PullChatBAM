@@ -65,6 +65,7 @@ export function NavHeader({ nomor }: { nomor: Nomor }) {
         { href: '/internal-numbers', label: 'Nomor internal' },
         ...(isAdmin ? [{ href: '/aduan', label: 'Aduan' }] : []),
         ...(isAdmin ? [{ href: '/channel', label: 'Channel WA' }] : []),
+        ...(isAdmin ? [{ href: '/jejak', label: 'Jejak eksekusi' }] : []),
       ],
     },
     ...(isAdmin
