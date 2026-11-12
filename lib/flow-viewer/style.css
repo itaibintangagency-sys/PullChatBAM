@@ -1,0 +1,224 @@
+/* ══════════════ Token warna (terang = bawaan; gelap mengikuti sistem atau data-theme) ══════════════ */
+:root {
+  --fv-ink: #f1f4f9;
+  --fv-panel: rgba(255, 255, 255, .94);
+  --fv-line: #cdd6e3;
+  --fv-text: #14213a;
+  --fv-muted: #566784;
+  --fv-node: #ffffff;
+  --fv-edge: #a3b3ca;
+  --fv-grid: rgba(60, 80, 110, .17);
+  --fv-glow: #e8452f;
+  --fv-glow-soft: rgba(232, 69, 47, .17);
+  --fv-settled: #ee7050;
+  --fv-head: #d9361e;
+  --fv-pulse: #b8301c;
+  --fv-seen-fill: #fde9e2;
+  --fv-on-fill: #ffd9cc;
+  --fv-accent-ink: #ffffff;
+  --fv-stage-a: .085;
+
+  --k-trigger: #de6027; --k-code: #4f6f9f; --k-decision: #b38b0c; --k-data: #2d8b6e;
+  --k-http: #8858be; --k-merge: #62758f; --k-wait: #6a6fb8; --k-stop: #c4434f; --k-message: #1d9b63;
+
+  --fv-font: "Schibsted Grotesk", "Segoe UI", system-ui, -apple-system, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --fv-ink: #0d1627; --fv-panel: rgba(18, 31, 52, .93); --fv-line: #2a3c5a;
+    --fv-text: #e8eef8; --fv-muted: #93a6c2; --fv-node: #16253d; --fv-edge: #3a4f70;
+    --fv-grid: rgba(147, 166, 194, .15); --fv-glow: #ff6d5a; --fv-glow-soft: rgba(255, 109, 90, .2);
+    --fv-settled: #ff9a6c; --fv-head: #fff1dc; --fv-pulse: #fff3df;
+    --fv-seen-fill: #2b2230; --fv-on-fill: #4a2a2e; --fv-accent-ink: #1d0c09; --fv-stage-a: .06;
+    --k-trigger: #ff8a5b; --k-code: #7b97c4; --k-decision: #e6c34a; --k-data: #52b394;
+    --k-http: #b58be0; --k-merge: #8b9db8; --k-wait: #8f94d6; --k-stop: #d95b66; --k-message: #46c488;
+  }
+}
+:root[data-theme="dark"] {
+  --fv-ink: #0d1627; --fv-panel: rgba(18, 31, 52, .93); --fv-line: #2a3c5a;
+  --fv-text: #e8eef8; --fv-muted: #93a6c2; --fv-node: #16253d; --fv-edge: #3a4f70;
+  --fv-grid: rgba(147, 166, 194, .15); --fv-glow: #ff6d5a; --fv-glow-soft: rgba(255, 109, 90, .2);
+  --fv-settled: #ff9a6c; --fv-head: #fff1dc; --fv-pulse: #fff3df;
+  --fv-seen-fill: #2b2230; --fv-on-fill: #4a2a2e; --fv-accent-ink: #1d0c09; --fv-stage-a: .06;
+  --k-trigger: #ff8a5b; --k-code: #7b97c4; --k-decision: #e6c34a; --k-data: #52b394;
+  --k-http: #b58be0; --k-merge: #8b9db8; --k-wait: #8f94d6; --k-stop: #d95b66; --k-message: #46c488;
+}
+
+/* ══════════════ Kanvas ══════════════ */
+.fv, .fv *, .fv *::before, .fv *::after { box-sizing: border-box; }
+.fv {
+  position: relative; width: 100%; height: 100%; min-height: 480px; overflow: hidden;
+  background-color: var(--fv-ink); color: var(--fv-text); font-family: var(--fv-font);
+  background-image: radial-gradient(circle, var(--fv-grid) 1.3px, transparent 1.6px);
+  background-size: var(--gs, 28px) var(--gs, 28px);
+  background-position: var(--gx, 0) var(--gy, 0);
+  -webkit-tap-highlight-color: transparent;
+}
+.fv[data-lod="far"] { background-image: none; }
+.fv:focus-visible, .fv button:focus-visible, .fv input:focus-visible { outline: 2px solid var(--fv-glow); outline-offset: 2px; }
+
+.fv-svg { position: absolute; inset: 0; width: 100%; height: 100%; cursor: grab; touch-action: none; user-select: none; }
+.fv.is-dragging .fv-svg { cursor: grabbing; }
+
+/* tahap */
+.fv-stage {
+  fill: hsl(var(--hue) 55% 55% / var(--fv-stage-a));
+  stroke: hsl(var(--hue) 50% 55% / .3); stroke-width: 1px; vector-effect: non-scaling-stroke;
+}
+
+/* koneksi */
+.fv-edge { fill: none; stroke: var(--fv-edge); stroke-linecap: round; }
+.fv-arrow { fill: var(--fv-edge); }
+.fv-branch { font: 600 13px var(--fv-font); fill: var(--fv-muted); paint-order: stroke; stroke: var(--fv-ink); stroke-width: 4px; display: none; }
+.fv[data-lod="near"] .fv-branch { display: block; }
+
+/* jalur bercahaya */
+.fv-halo path, .fv-core path, .fv-headpath { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.fv-halo .halo { stroke: var(--fv-glow-soft); }
+.fv-halo .halo.settled { stroke: var(--fv-glow-soft); opacity: .55; }
+.fv-core .core { stroke: var(--fv-glow); }
+.fv-core .core.settled { stroke: var(--fv-settled); opacity: .75; }
+.fv-headpath { stroke: var(--fv-head); opacity: 0; }
+.fv-pulse-glow { fill: var(--fv-glow); opacity: .3; }
+.fv-pulse-dot { fill: var(--fv-pulse); }
+.is-playing .fv-pulse-glow { animation: fv-breathe 1s ease-in-out infinite; }
+@keyframes fv-breathe { 50% { opacity: .12; } }
+
+/* node */
+.fv-node { cursor: default; transition: opacity .3s; }
+.fv-node .shape { fill: var(--fv-node); stroke: var(--kc); stroke-width: 2.4; transition: fill .25s, stroke .25s; }
+.fv-node .icon { fill: none; stroke: var(--kc); stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; transition: stroke .25s; }
+.fv-node-halo { fill: var(--fv-glow-soft); opacity: 0; transition: opacity .25s; pointer-events: none; }
+.k-trigger { --kc: var(--k-trigger); } .k-code { --kc: var(--k-code); } .k-decision { --kc: var(--k-decision); }
+.k-data { --kc: var(--k-data); } .k-http { --kc: var(--k-http); } .k-merge { --kc: var(--k-merge); }
+.k-wait { --kc: var(--k-wait); } .k-stop { --kc: var(--k-stop); } .k-message { --kc: var(--k-message); }
+.fv-node.k-stop .shape { stroke-dasharray: 7 5; }
+
+.has-route .fv-node:not(.inpath) { opacity: .4; }
+.fv-node.seen .shape { fill: var(--fv-seen-fill); stroke: var(--fv-settled); }
+.fv-node.seen .icon { stroke: var(--fv-settled); }
+.fv-node.on .shape { fill: var(--fv-on-fill); stroke: var(--fv-glow); stroke-width: 3.2; }
+.fv-node.on .icon { stroke: var(--fv-glow); }
+.fv-node.on .fv-node-halo { opacity: 1; }
+
+.fv-label { display: none; font: 600 17px var(--fv-font); fill: var(--fv-text); paint-order: stroke; stroke: var(--fv-ink); stroke-width: 5px; stroke-linejoin: round; pointer-events: none; }
+.fv[data-lod="near"] .fv-label { display: block; }
+.fv-node.on .fv-label { fill: var(--fv-glow); }
+.fv[data-lod="mid"] .fv-node.on .fv-label { display: block; font-size: 30px; stroke-width: 8px; }
+
+/* ══════════════ HUD ══════════════ */
+.fv button { font-family: inherit; cursor: pointer; }
+
+.fv-head-bar {
+  position: absolute; inset: 0 0 auto 0; display: flex; justify-content: space-between; align-items: flex-start;
+  gap: 12px; padding: 16px 20px 40px; pointer-events: none;
+  background: linear-gradient(var(--fv-ink) 30%, transparent);
+}
+.fv-head-bar > * { pointer-events: auto; }
+.fv-titlebox h2 { margin: 0; font-size: 22px; font-weight: 700; letter-spacing: -.015em; line-height: 1.2; }
+.fv-titlebox p { margin: 3px 0 0; font-size: 13.5px; color: var(--fv-muted); }
+.fv-tools { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+
+.fv-seg { display: inline-flex; border: 1px solid var(--fv-line); border-radius: 10px; overflow: hidden; background: var(--fv-panel); }
+.fv-seg button { border: 0; background: transparent; color: var(--fv-muted); padding: 7px 12px; font-size: 13px; font-weight: 600; min-width: 36px; }
+.fv-seg button + button { border-left: 1px solid var(--fv-line); }
+.fv-seg button:hover { color: var(--fv-text); }
+.fv-seg button[aria-pressed="true"] { background: var(--fv-text); color: var(--fv-ink); }
+
+.fv-scenarios {
+  position: absolute; top: 78px; left: 20px; right: 20px; display: flex; gap: 8px; overflow-x: auto; padding: 2px 0 6px;
+  scrollbar-width: none; mask-image: linear-gradient(90deg, #000 94%, transparent);
+}
+.fv-scenarios::-webkit-scrollbar { display: none; }
+.fv-chip {
+  flex: none; border: 1px solid var(--fv-line); background: var(--fv-panel); color: var(--fv-text);
+  padding: 7px 14px; border-radius: 999px; font-size: 13.5px; font-weight: 600; white-space: nowrap;
+  transition: background .2s, border-color .2s;
+}
+.fv-chip:hover { border-color: var(--fv-glow); }
+.fv-chip[aria-pressed="true"] { background: var(--fv-glow); border-color: var(--fv-glow); color: var(--fv-accent-ink); }
+
+/* label tahap */
+.fv-stage-labels { position: absolute; inset: 0; pointer-events: none; }
+.fv-stage-label {
+  position: absolute; left: 0; top: 0; pointer-events: auto; will-change: transform;
+  border: 1px solid hsl(var(--hue) 50% 50% / .45); border-radius: 999px; padding: 5px 12px;
+  background: var(--fv-panel); color: var(--fv-text); font-size: 12.5px; font-weight: 650; white-space: nowrap;
+}
+.fv-stage-label::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 7px; background: hsl(var(--hue) 65% 52%); }
+.fv-stage-label.is-current { border-color: hsl(var(--hue) 65% 52%); box-shadow: 0 0 0 3px hsl(var(--hue) 65% 52% / .22); }
+
+/* keterangan langkah */
+.fv-caption {
+  position: absolute; left: 20px; bottom: 78px; width: min(430px, calc(100% - 40px));
+  background: var(--fv-panel); border: 1px solid var(--fv-line);
+  border-left: 4px solid hsl(var(--cap-hue, 205) 65% 52%); border-radius: 14px; padding: 12px 16px 13px;
+  backdrop-filter: blur(8px); pointer-events: none;
+}
+.fv-cap-step { font-size: 12.5px; color: var(--fv-muted); font-weight: 600; }
+.fv-cap-title { margin-top: 2px; font-size: 19px; font-weight: 700; letter-spacing: -.01em; line-height: 1.25; }
+.fv-cap-sub { margin-top: 6px; font-size: 13.5px; line-height: 1.5; color: var(--fv-muted); max-width: 62ch; }
+.fv-cap-sub b { color: var(--fv-text); font-weight: 650; }
+.fv-cap-foot { margin-top: 9px; padding-top: 9px; border-top: 1px dashed var(--fv-line); font-size: 13.5px; line-height: 1.45; color: var(--fv-text); }
+
+/* kontrol putar */
+.fv-transport { position: absolute; left: 20px; right: 20px; bottom: 16px; display: flex; align-items: center; gap: 12px; }
+.fv-play {
+  display: inline-flex; align-items: center; gap: 8px; border: 0; border-radius: 11px; padding: 9px 16px 9px 13px;
+  background: var(--fv-glow); color: var(--fv-accent-ink); font-size: 14px; font-weight: 700; min-width: 98px; justify-content: center;
+}
+.fv-play svg { width: 16px; height: 16px; fill: currentColor; stroke: currentColor; }
+.fv-slider { flex: 1; min-width: 80px; accent-color: var(--fv-glow); height: 28px; cursor: pointer; }
+.fv-follow {
+  border: 1px solid var(--fv-line); background: var(--fv-panel); color: var(--fv-muted); border-radius: 10px;
+  padding: 7px 12px; font-size: 13px; font-weight: 600;
+}
+.fv-follow[aria-pressed="true"] { color: var(--fv-text); border-color: var(--fv-glow); }
+
+.fv-legend {
+  position: absolute; right: 20px; bottom: 78px; display: flex; flex-direction: column; gap: 5px; padding: 10px 12px;
+  background: var(--fv-panel); border: 1px solid var(--fv-line); border-radius: 12px; font-size: 12.5px; color: var(--fv-muted);
+}
+.fv-legend span { display: flex; align-items: center; gap: 8px; }
+.fv-legend svg { width: 18px; height: 18px; flex: none; }
+.fv-legend { transition: opacity .3s; }
+.fv.is-playing .fv-legend:not(:hover) { opacity: .28; }
+.fv-legend .shape { fill: var(--fv-node); stroke: var(--kc); stroke-width: 2.4; }
+
+.fv-tip {
+  position: absolute; left: 0; top: 0; max-width: 250px; pointer-events: none; z-index: 5;
+  background: var(--fv-panel); border: 1px solid var(--fv-line); border-radius: 10px; padding: 9px 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .18);
+}
+.fv-tip[hidden] { display: none; }
+.fv-tip strong { display: block; font-size: 14px; }
+.fv-tip em { display: block; font-style: normal; font-size: 12px; color: var(--fv-muted); margin-top: 1px; }
+.fv-tip span { display: block; font-size: 12px; color: var(--fv-muted); margin-top: 5px; }
+
+/* ══════════════ Ponsel ══════════════ */
+@media (max-width: 700px) {
+  .fv-head-bar { flex-wrap: wrap; padding: 12px 12px 34px; }
+  .fv-titlebox h2 { font-size: 17px; }
+  .fv-titlebox p { font-size: 12.5px; }
+  .fv-tools { width: 100%; justify-content: flex-start; }
+  .fv-zoom { display: none; }
+  .fv-scenarios { top: 104px; left: 12px; right: 12px; }
+  .fv-caption { left: 12px; bottom: 124px; width: calc(100% - 24px); padding: 10px 14px; }
+  .fv-cap-title { font-size: 17px; }
+  .fv-cap-sub { font-size: 13px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .fv-transport { left: 12px; right: 12px; bottom: 12px; flex-wrap: wrap; row-gap: 8px; }
+  .fv-slider { order: 3; flex-basis: 100%; }
+  .fv-legend { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fv *, .fv *::before { animation: none !important; transition: none !important; }
+}
+
+/* ══════════════ Node gagal (replay eksekusi) ══════════════ */
+:root { --fv-err: #c8312b; --fv-err-fill: rgba(200, 49, 43, .13); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --fv-err: #ff6b63; --fv-err-fill: rgba(255, 107, 99, .16); } }
+:root[data-theme="dark"] { --fv-err: #ff6b63; --fv-err-fill: rgba(255, 107, 99, .16); }
+.fv-node.is-error .shape, .fv-node.is-error.seen .shape, .fv-node.is-error.on .shape { fill: var(--fv-err-fill); stroke: var(--fv-err); stroke-width: 3.6; }
+.fv-node.is-error .icon, .fv-node.is-error.seen .icon, .fv-node.is-error.on .icon { stroke: var(--fv-err); }
+.fv-node.is-error .fv-label { fill: var(--fv-err); }

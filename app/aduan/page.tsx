@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useCallback, useMemo, useState } from 'react';
 import { RequireAdmin } from '@/components/RouteGuard';
 import { NavHeader } from '@/components/NavHeader';
@@ -382,6 +383,12 @@ function AduanContent() {
                           >
                             Simpan catatan
                           </button>
+                          <Link
+                            href={`/jejak?aduan=${encodeURIComponent(r.ticket_id)}`}
+                            className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-white"
+                          >
+                            Lihat jalur bot
+                          </Link>
                         </div>
                       </div>
                     )}
