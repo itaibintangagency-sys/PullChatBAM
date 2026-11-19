@@ -282,6 +282,15 @@ function AduanContent() {
                     {terbuka && (
                       <div className="space-y-3 border-t border-gray-100 bg-gray-50 px-4 py-4 text-sm">
                         <div className="flex flex-wrap gap-x-6 gap-y-1 text-gray-600">
+                          {r.sumber === 'IG' || r.sumber === 'FB' ? (
+                            <span>
+                              ID {SUMBER_LABEL[r.sumber]}: {r.nomor_wa || r.platform_user_id || '–'} ·{' '}
+                              <Link className="text-blue-700 underline" href="/meta/chats">
+                                Buka chat log IG/FB
+                              </Link>{' '}
+                              (balas lewat {SUMBER_LABEL[r.sumber]}, bukan WhatsApp)
+                            </span>
+                          ) : (
                           <span>
                             Nomor WA:{' '}
                             {r.nomor_wa ? (
@@ -297,7 +306,10 @@ function AduanContent() {
                               '–'
                             )}
                           </span>
-                          {r.platform_user_id && <span>ID platform: {r.platform_user_id}</span>}
+                          )}
+                          {r.platform_user_id && r.sumber !== 'IG' && r.sumber !== 'FB' && (
+                            <span>ID platform: {r.platform_user_id}</span>
+                          )}
                           <span>{emailBadge(r)}</span>
                           {r.resolved_at && <span>Selesai: {formatWib(r.resolved_at)}</span>}
                         </div>
